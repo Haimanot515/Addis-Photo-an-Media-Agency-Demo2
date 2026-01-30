@@ -17,6 +17,7 @@ import Blog from "./pages/Blog";
 import RegisterForm from "./pages/RegisterForm";
 import LoginForm from "./pages/LoginForm";
 import VerifyEmail from "./pages/VerifyEmail";
+import UserProfile from "./pages/UserProfile"; // ✅ Added User Profile Import
 
 // Admin & Legal Pages
 import AdminHome from "./pages/AdminHome"; 
@@ -27,6 +28,7 @@ import AdminHero from "./pages/admin/AdminHero";
 import AdminServices from "./pages/admin/AdminServices"; 
 import AdminBlog from "./pages/admin/AdminBlog"; 
 import AdminUsers from "./pages/admin/AdminUsers"; 
+import AdminProfile from "./pages/admin/AdminProfile"; 
 
 // ✅ ADMIN CONTACT IMPORT
 import AdminContact from "./pages/admin/AdminContact";
@@ -101,6 +103,7 @@ function App() {
           <Route path="/team" element={<Team />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/profile" element={<UserProfile />} /> {/* ✅ User Profile Route Mounted */}
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
@@ -118,6 +121,7 @@ function App() {
           <Route path="/admin/services" element={<AdminServices />} /> 
           <Route path="/admin/blog" element={<AdminBlog />} />
           <Route path="/admin/users" element={<AdminUsers />} /> 
+          <Route path="/admin/profile" element={<AdminProfile />} /> 
           
           {/* ✅ Updated Admin Message Route */}
           <Route path="/admin/messages" element={<AdminContact />} /> 

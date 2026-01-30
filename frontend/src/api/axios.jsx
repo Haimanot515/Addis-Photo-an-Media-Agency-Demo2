@@ -26,7 +26,7 @@ api.interceptors.response.use(
         // Attempt to refresh the session via cookies
         await api.post("/auth/refresh");
 
-        // If refresh works, retry original request
+        // Retry the original request after successful refresh
         return api(originalRequest);
       } catch (err) {
         /**
@@ -34,11 +34,10 @@ api.interceptors.response.use(
          * We log the error but do NOT force window.location.href to change.
          */
         console.warn("Session expired or refresh failed. Automatic redirect disabled for development.");
-        
+
         // localStorage.clear(); // Optional: keep or remove based on preference
-        
         // window.location.href = "/login"; // <--- REMOVED TO PREVENT REDIRECT
-        
+
         return Promise.reject(err);
       }
     }

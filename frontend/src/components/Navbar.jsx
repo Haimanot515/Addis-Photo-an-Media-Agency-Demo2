@@ -1,8 +1,27 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 export default function Navbar({ role, setRole }) {
   const navigate = useNavigate();
+  const [user, setUser] = useState({ full_name: "PROFILE", photo_url: "" });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/user/profile");
+        if (res.data.success && res.data.profile) {
+          setUser({
+            full_name: res.data.profile.full_name || "PROFILE",
+            photo_url: res.data.profile.photo_url || ""
+          });
+        }
+      } catch (err) {
+        console.error("Profile sync error");
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear(); 
@@ -19,14 +38,10 @@ export default function Navbar({ role, setRole }) {
 
   return (
     <nav className="navbar">
-      {/* Size fix: In your HTML, 'Home' is a direct child of 'navbar'. 
-          Ensure no extra divs are wrapping this link.
-      */}
       <NavLink to="/home" className={({ isActive }) => (isActive ? "active" : "")}>
         Home
       </NavLink>
 
-      {/* Hamburger toggle for mobile */}
       <input type="checkbox" id="nav-toggle" className="nav-toggle" />
       <label htmlFor="nav-toggle" className="nav-toggle-label" aria-label="Toggle navigation menu">
         <svg className="hamburger-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" 
@@ -43,9 +58,6 @@ export default function Navbar({ role, setRole }) {
         </svg>
       </label>
 
-      {/* IMPORTANT: The "container" class here is likely what controls 
-          the width and padding that dictates the overall navbar height.
-      */}
       <ul className="nav-list container">
         <li><NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>About</NavLink></li>
         <li><NavLink to="/services" className={({ isActive }) => (isActive ? "active" : "")}>Services</NavLink></li>
@@ -54,30 +66,49 @@ export default function Navbar({ role, setRole }) {
         <li><NavLink to="/contact" className={({ isActive }) => (isActive ? "active" : "")}>Contact</NavLink></li>
         <li><NavLink to="/blog" className={({ isActive }) => (isActive ? "active" : "")}>Blog</NavLink></li>
 
-        {/* Existing React Links */}
         {isAdmin && (
           <li>
             <NavLink to="/admin/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
-              Admin Dashboard
+              Administration
             </NavLink>
           </li>
         )}
 
         <li>
           <button 
-            onClick={handleLogout} 
-            className="logout-btn" 
+            onClick={() => navigate("/profile")} 
+            className="logout-btn"
             style={{ 
-              background: 'none', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              background: 'transparent', 
               border: 'none', 
-              color: 'white', 
-              cursor: 'pointer', 
-              font: 'inherit',
-              padding: '0',
-              marginLeft: '15px' // Matches link spacing
+              cursor: 'pointer',
+              padding: '0' // Removed padding to prevent displacement
             }}
           >
-            Logout
+            <div style={{
+              width: '24px', // Small size to match text height
+              height: '24px', 
+              borderRadius: '50%', 
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0 // Prevents the circle from squishing
+            }}>
+              {user.photo_url ? (
+                <img src={user.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>
+                  {user.full_name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <span style={{ color: '#fff', fontWeight: '600' }}>
+              {user.full_name.toUpperCase()}
+            </span>
           </button>
         </li>
       </ul>

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UploadCloud, Trash2, Image as ImageIcon, RefreshCw, Plus } from 'lucide-react';
+import { UploadCloud, Trash2, Image as ImageIcon, RefreshCw, X, Loader2 } from 'lucide-react';
 
 const AdminPortfolio = () => {
     const [portfolio, setPortfolio] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     
-    // Form State for PUSH
+    // Form State
     const [alt, setAlt] = useState("");
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
+    const [status, setStatus] = useState({ type: '', msg: '' });
 
-    // 1. READ: Fetch the Portfolio Registry
     const fetchPortfolio = async () => {
+        setFetching(true);
         try {
             const res = await axios.get('/api/admin/portfolio');
             if (res.data.success) {
@@ -30,156 +31,216 @@ const AdminPortfolio = () => {
         fetchPortfolio();
     }, []);
 
-    // Handle Image Selection & Preview
     const onFileChange = (e) => {
         const selectedFile = e.target.files[0];
-        setFile(selectedFile);
         if (selectedFile) {
+            setFile(selectedFile);
             setPreview(URL.createObjectURL(selectedFile));
         }
     };
 
-    // 2. PUSH: Commit a New Node to the Registry
     const handlePush = async (e) => {
         e.preventDefault();
-        if (!file || !alt) return alert("Authority requires an Image and Alt Text.");
+        if (!file || !alt) {
+            setStatus({ type: 'error', msg: "Authority requires an Image and Alt Text." });
+            return;
+        }
 
         const formData = new FormData();
         formData.append('image', file);
         formData.append('alt', alt);
 
         setLoading(true);
+        setStatus({ type: '', msg: '' });
+
         try {
             const res = await axios.post('/api/admin/portfolio', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                withCredentials: true
             });
 
             if (res.data.success) {
-                alert("REGISTRY PUSH: Node committed.");
+                setStatus({ type: 'success', msg: "REGISTRY PUSH: Node committed." });
                 setAlt("");
                 setFile(null);
                 setPreview(null);
-                fetchPortfolio(); // Refresh list
+                fetchPortfolio();
             }
         } catch (err) {
-            console.error("PUSH ERROR:", err.response?.data);
-            alert("Authority rejected the PUSH request.");
+            setStatus({ type: 'error', msg: "Authority rejected the PUSH request." });
         } finally {
             setLoading(false);
         }
     };
 
-    // 3. DROP: Purge a Node from the Registry
     const handleDrop = async (id) => {
-        if (!window.confirm("Confirm REGISTRY DROP? Node will be permanently deleted.")) return;
+        if (!window.confirm("WARNING: Execute DROP? Node will be permanently purged.")) return;
 
         try {
-            const res = await axios.delete(`/api/admin/portfolio/${id}`);
+            const res = await axios.delete(`/api/admin/portfolio/${id}`, { withCredentials: true });
             if (res.data.success) {
-                alert("REGISTRY DROP: Node purged.");
                 fetchPortfolio();
             }
         } catch (err) {
-            console.error("DROP ERROR:", err);
-            alert("Authority rejected the DROP request.");
+            setStatus({ type: 'error', msg: "DROP Failure: Authority rejected request." });
         }
     };
 
     return (
-        <div className="p-8 bg-[#f8fafc] min-h-screen font-sans">
-            <div className="max-w-7xl mx-auto">
-                <header className="flex justify-between items-center mb-10">
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
-                            <ImageIcon className="text-rose-600" size={32} />
-                            PORTFOLIO AUTHORITY
-                        </h1>
-                        <p className="text-slate-500 font-medium mt-1">Independent Registry for Project Assets</p>
-                    </div>
-                    {fetching && <RefreshCw className="animate-spin text-rose-500" />}
-                </header>
+        <main 
+            className="container contact" 
+            style={{ maxWidth: '1190px', marginTop: '100px' }}
+        >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <ImageIcon size={28} /> Portfolio Registry
+                </h1>
+                <button 
+                    onClick={fetchPortfolio} 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#151414' }}
+                >
+                    <RefreshCw className={fetching ? 'animate-spin' : ''} size={20} />
+                </button>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* LEFT: PUSH FORM */}
-                    <div className="lg:col-span-4">
-                        <form onSubmit={handlePush} className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm sticky top-24">
-                            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <Plus size={16} /> Execute PUSH
-                            </h2>
-                            
-                            <div className="space-y-5">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Alt Text</label>
+            <div className="contact-wrapper">
+                {/* LEFT COLUMN: PORTFOLIO GRID (Registry) */}
+                <section className="contact-details" style={{ flex: '1 1 500px', maxHeight: '800px', overflowY: 'auto' }}>
+                    <h2 style={{ color: '#fff' }}>Active Nodes</h2>
+                    <p style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                        Displaying {portfolio.length} assets currently in the registry.
+                    </p>
+
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr 1fr', 
+                        gap: '15px', 
+                        marginTop: '2rem' 
+                    }}>
+                        {portfolio.map((item) => (
+                            <div key={item.id} style={{ 
+                                background: 'rgba(255,255,255,0.05)', 
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                overflow: 'hidden',
+                                position: 'relative'
+                            }}>
+                                <div style={{ height: '120px', background: '#222' }}>
+                                    <img src={item.src} alt={item.alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <div style={{ padding: '10px' }}>
+                                    <p style={{ 
+                                        color: '#fff', 
+                                        fontSize: '0.75rem', 
+                                        margin: '0 0 8px 0',
+                                        height: '2.4em',
+                                        overflow: 'hidden',
+                                        textTransform: 'uppercase',
+                                        fontWeight: '600'
+                                    }}>
+                                        {item.alt}
+                                    </p>
+                                    <button 
+                                        onClick={() => handleDrop(item.id)} 
+                                        style={{ 
+                                            width: '100%',
+                                            background: 'rgba(225, 29, 72, 0.1)', 
+                                            border: '1px solid #e11d48', 
+                                            color: '#e11d48', 
+                                            fontSize: '0.7rem',
+                                            padding: '4px',
+                                            cursor: 'pointer',
+                                            borderRadius: '4px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        DROP
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* RIGHT COLUMN: PUSH FORM */}
+                <section className="contact-form-section" style={{ flex: '1 1 450px' }}>
+                    <form className="contact-form" onSubmit={handlePush} noValidate>
+                        <h2>Execute PUSH</h2>
+
+                        {status.msg && (
+                            <div style={{ 
+                                color: status.type === 'success' ? '#166534' : '#991b1b', 
+                                padding: '12px', 
+                                backgroundColor: status.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                                borderRadius: '8px',
+                                marginBottom: '1.5rem',
+                                fontSize: '0.85rem',
+                                border: `1px solid ${status.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+                            }}>
+                                {status.msg}
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label>Project Description *</label>
+                            <input 
+                                type="text" 
+                                value={alt}
+                                onChange={(e) => setAlt(e.target.value)}
+                                placeholder="Enter asset metadata..." 
+                                required 
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Asset Image *</label>
+                            {!preview ? (
+                                <div style={{ 
+                                    border: '2px dashed #ccc', 
+                                    borderRadius: '8px', 
+                                    padding: '50px 20px', 
+                                    textAlign: 'center', 
+                                    position: 'relative',
+                                    backgroundColor: '#fafafa'
+                                }}>
+                                    <UploadCloud style={{ margin: '0 auto 10px' }} size={32} color="#999" />
+                                    <p style={{ fontSize: '0.8rem', color: '#999' }}>Click to select project file</p>
                                     <input 
-                                        type="text" 
-                                        placeholder="Project description..." 
-                                        value={alt} 
-                                        onChange={(e) => setAlt(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
-                                        required 
+                                        type="file" 
+                                        onChange={onFileChange} 
+                                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} 
                                     />
                                 </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Upload Asset</label>
-                                    <div className="relative group cursor-pointer">
-                                        <input 
-                                            type="file" 
-                                            onChange={onFileChange}
-                                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                            required 
-                                        />
-                                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center group-hover:border-rose-400 transition-colors">
-                                            {preview ? (
-                                                <img src={preview} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
-                                            ) : (
-                                                <>
-                                                    <UploadCloud className="text-slate-300 mb-2" size={30} />
-                                                    <span className="text-xs font-semibold text-slate-400">Select Image</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
+                            ) : (
+                                <div style={{ position: 'relative', height: '220px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eee' }}>
+                                    <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" />
+                                    <button 
+                                        type="button"
+                                        onClick={() => {setFile(null); setPreview(null);}} 
+                                        style={{ 
+                                            position: 'absolute', top: '10px', right: '10px', 
+                                            background: '#000', color: '#fff', border: 'none', 
+                                            borderRadius: '50%', padding: '5px', cursor: 'pointer' 
+                                        }}
+                                    >
+                                        <X size={16} />
+                                    </button>
                                 </div>
-
-                                <button 
-                                    type="submit" 
-                                    disabled={loading}
-                                    className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-slate-200 disabled:bg-slate-300"
-                                >
-                                    {loading ? "SYNCING..." : "COMMIT PUSH"}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {/* RIGHT: REGISTRY VIEW */}
-                    <div className="lg:col-span-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {portfolio.map((item) => (
-                                <div key={item.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden group hover:shadow-xl transition-all">
-                                    <div className="relative overflow-hidden aspect-video">
-                                        <img src={item.src} alt={item.alt} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                        <div className="absolute top-3 right-3">
-                                            <button 
-                                                onClick={() => handleDrop(item.id)}
-                                                className="bg-white/90 backdrop-blur p-2 rounded-full text-rose-600 hover:bg-rose-600 hover:text-white transition-colors shadow-sm"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 bg-white">
-                                        <p className="text-sm font-bold text-slate-800 uppercase tracking-tight truncate">{item.alt}</p>
-                                        <p className="text-[10px] text-slate-400 font-mono mt-1">NODE_ID: {item.id}</p>
-                                    </div>
-                                </div>
-                            ))}
+                            )}
                         </div>
-                    </div>
-                </div>
+
+                        <button 
+                            type="submit" 
+                            className="btn-submit" 
+                            disabled={loading}
+                            style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '1rem' }}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : "COMMIT TO REGISTRY"}
+                        </button>
+                    </form>
+                </section>
             </div>
-        </div>
+        </main>
     );
 };
 

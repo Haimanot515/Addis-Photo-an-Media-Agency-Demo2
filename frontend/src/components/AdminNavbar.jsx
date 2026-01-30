@@ -1,10 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // ✅ Added useEffect
 import { NavLink, Link } from 'react-router-dom';
 import { Users, UserCircle, ShieldCheck, Inbox, LayoutDashboard, Home, X, Settings } from 'lucide-react'; 
+import api from '../api/axios'; // ✅ Imported your axios instance
 import DynamicSidebar from './DynamicSidebar'; 
 
 const AdminNavbar = () => {
   const [sidebarMode, setSidebarMode] = useState(null); 
+  const [adminData, setAdminData] = useState({ full_name: 'Admin', photo_url: '' }); // ✅ State for profile
+
+  // ✅ Fetch Admin Identity on Mount
+  useEffect(() => {
+    const fetchAdmin = async () => {
+      try {
+        const res = await api.get('/admin/profile');
+        if (res.data.success && res.data.profile) {
+          setAdminData(res.data.profile);
+        }
+      } catch (err) {
+        console.error("NAVBAR_SYNC_ERROR");
+      }
+    };
+    fetchAdmin();
+  }, []);
 
   const toggleSidebar = (mode) => {
     setSidebarMode(sidebarMode === mode ? null : mode);
@@ -21,8 +38,8 @@ const AdminNavbar = () => {
       fontFamily: "'Inter', sans-serif",
     },
     container: {
-      maxWidth: '100%', // Expanded for better screen fit
-      padding: '0 40px', // Consistent edge spacing
+      maxWidth: '100%',
+      padding: '0 40px',
       width: '100%',
       margin: '0 auto',
       height: '100%',
@@ -52,7 +69,7 @@ const AdminNavbar = () => {
       margin: '0 20px', 
       padding: 0,
       flex: 1,
-      justifyContent: 'center' // Centers the main hub links
+      justifyContent: 'center' 
     },
     link: {
       background: 'none', 
@@ -64,7 +81,7 @@ const AdminNavbar = () => {
       alignItems: 'center', 
       gap: '10px', 
       cursor: 'pointer',
-      whiteSpace: 'nowrap', // Prevents text wrapping
+      whiteSpace: 'nowrap', 
       flexShrink: 0
     },
     activeToggle: { color: '#e11d48', fontWeight: '900' },
@@ -88,6 +105,14 @@ const AdminNavbar = () => {
       fontSize: '17px',
       fontWeight: '600',
       whiteSpace: 'nowrap'
+    },
+    // ✅ Added circular photo style
+    profileImg: {
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      objectFit: 'cover',
+      border: '2px solid #333'
     }
   };
 
@@ -102,13 +127,13 @@ const AdminNavbar = () => {
           <ul style={styles.navLinks}>
             <li>
               <button onClick={() => toggleSidebar('terminal')} style={sidebarMode === 'terminal' ? {...styles.link, ...styles.activeToggle} : styles.link}>
-                <LayoutDashboard size={20} /> Terminal Manager
+                <LayoutDashboard size={20} /> Dashboard
               </button>
             </li>
 
             <li>
               <button onClick={() => toggleSidebar('users')} style={sidebarMode === 'users' ? {...styles.link, ...styles.activeToggle} : styles.link}>
-                <Users size={20} /> User Hub
+                <Users size={20} /> Users
               </button>
             </li>
 
@@ -130,11 +155,17 @@ const AdminNavbar = () => {
               onClick={() => toggleSidebar('settings')} 
               style={sidebarMode === 'settings' ? {...styles.profileBtn, ...styles.activeToggle} : styles.profileBtn}
             >
-              <UserCircle size={24} />
-              <span>Admin</span>
+              {/* ✅ Dynamic Image Logic */}
+              {adminData.photo_url ? (
+                <img src={adminData.photo_url} alt="Profile" style={styles.profileImg} />
+              ) : (
+                <UserCircle size={24} />
+              )}
+              {/* ✅ Dynamic Name */}
+              <span>{adminData.full_name.split(' ')[0]}</span> 
             </button>
             
-            <Link to="/home" style={{...styles.link, fontSize: '15px'}}><Home size={18} /> Back to Home</Link>
+            <Link to="/home" style={{...styles.link, fontSize: '15px'}}><Home size={18} />Home</Link>
           </div>
         </div>
       </nav>

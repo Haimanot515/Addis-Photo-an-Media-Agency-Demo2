@@ -1,50 +1,35 @@
 const express = require("express");
 const router = express.Router();
-const adminMiddleware = require("../../middleware/adminMiddleware");
+const adminMiddleware = require("../../middleware/adminMiddleware"); // Matches Service Route
 
 // ✅ INDEPENDENT IMPORTS (The Authority Pattern)
 const { 
-    getAdminLegalRegistry,
-    pushPrivacyRule, dropPrivacyRule,
-    pushTermsRule, dropTermsRule,
-    pushCookieRule, dropCookieRule 
+  getAdminLegalRegistry, 
+  pushPrivacyRule, 
+  dropPrivacyRule,
+  pushTermsRule, 
+  dropTermsRule,
+  pushCookieRule, 
+  dropCookieRule 
 } = require("../../controllers/admin/adminLegal");
 
 /* -----------------------------------------
-    ADMIN LEGAL AUTHORITY: REGISTRY SYNC
+    ADMIN LEGAL AUTHORITY
 ----------------------------------------- */
 
-// Fetch all rules for all policies (1, 2, 3...)
+// SYNC: Fetch Entire Registry
 router.get("/", adminMiddleware, getAdminLegalRegistry);
 
-/* -----------------------------------------
-    ADMIN LEGAL AUTHORITY: PRIVACY
------------------------------------------ */
-
-// Commit PUSH (Add new or Update specific by ID in body)
+// PRIVACY: PUSH & DROP
 router.put("/privacy", adminMiddleware, pushPrivacyRule);
-
-// Execute DROP (Remove specific node by ID)
 router.delete("/privacy/:id", adminMiddleware, dropPrivacyRule);
 
-/* -----------------------------------------
-    ADMIN LEGAL AUTHORITY: TERMS
------------------------------------------ */
-
-// Commit PUSH (Add new or Update specific by ID in body)
+// TERMS: PUSH & DROP
 router.put("/terms", adminMiddleware, pushTermsRule);
-
-// Execute DROP (Remove specific node by ID)
 router.delete("/terms/:id", adminMiddleware, dropTermsRule);
 
-/* -----------------------------------------
-    ADMIN LEGAL AUTHORITY: COOKIES
------------------------------------------ */
-
-// Commit PUSH (Add new or Update specific by ID in body)
+// COOKIE: PUSH & DROP
 router.put("/cookie", adminMiddleware, pushCookieRule);
-
-// Execute DROP (Remove specific node by ID)
 router.delete("/cookie/:id", adminMiddleware, dropCookieRule);
 
 module.exports = router;

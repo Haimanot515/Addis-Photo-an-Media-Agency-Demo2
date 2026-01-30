@@ -1,82 +1,85 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { ShieldCheck, Save, Trash2, Hash, Plus, RefreshCcw } from 'lucide-react';
+import api from '../../api/axios';
+import { ShieldCheck, Trash2, RefreshCw, Hash, Loader2, Save } from 'lucide-react';
 
 const AdminPrivacyPolicy = () => {
     const [sections, setSections] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
+    const [newRule, setNewRule] = useState({ serial_number: '', title: '', content: '' });
+    const [status, setStatus] = useState({ type: '', msg: '' });
 
     const syncRegistry = async () => {
-        setLoading(true);
+        setFetching(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('/api/admin/legal', { headers: { Authorization: `Bearer ${token}` } });
-            setSections(res.data.registry.privacy.sort((a, b) => a.serial_number - b.serial_number));
+            const res = await api.get('/admin/legal');
+            if (res.data.success) {
+                setSections(res.data.registry.privacy.sort((a, b) => a.serial_number - b.serial_number));
+            }
         } catch (err) { console.error("PRIVACY_SYNC_FAIL"); }
-        finally { setLoading(false); }
+        finally { setFetching(false); }
     };
 
     useEffect(() => { syncRegistry(); }, []);
 
-    const addNode = () => {
-        const nextSn = sections.length > 0 ? Math.max(...sections.map(s => s.serial_number)) + 1 : 1;
-        setSections([...sections, { serial_number: nextSn, title: '', content: '', isNew: true }]);
+    const handlePush = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const res = await api.put('/admin/legal/privacy', newRule);
+            if (res.data.success) {
+                setStatus({ type: 'success', msg: "REGISTRY PUSH: Privacy node committed." });
+                setNewRule({ serial_number: '', title: '', content: '' });
+                syncRegistry();
+            }
+        } catch (err) { setStatus({ type: 'error', msg: "PUSH rejected by Authority." }); }
+        finally { setLoading(false); }
     };
 
-    const pushNode = async (index) => {
-        const node = sections[index];
+    const handleDrop = async (id) => {
+        if (!window.confirm("EXECUTE DROP: Purge this privacy rule?")) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.put('/api/admin/legal/privacy', node, { headers: { Authorization: `Bearer ${token}` } });
-            alert(`PRIVACY NODE ${node.serial_number} COMMITTED`);
+            await api.delete(`/admin/legal/privacy/${id}`);
             syncRegistry();
-        } catch (err) { alert("PUSH_ERROR"); }
-    };
-
-    const dropNode = async (id, index) => {
-        if (!window.confirm("EXECUTE DROP: REMOVE THIS PRIVACY RULE?")) return;
-        try {
-            const token = localStorage.getItem('token');
-            if (id) await axios.delete(`/api/admin/legal/privacy/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-            const updated = [...sections];
-            updated.splice(index, 1);
-            setSections(updated);
         } catch (err) { alert("DROP_ERROR"); }
     };
 
     return (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm mb-8">
-            <div className="flex justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="bg-blue-50 p-3 rounded-2xl text-blue-600"><ShieldCheck size={24} /></div>
-                    <h2 className="text-sm font-black uppercase tracking-widest">Privacy Authority</h2>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={syncRegistry} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all"><RefreshCcw size={18} className={loading ? "animate-spin" : ""} /></button>
-                    <button onClick={addNode} className="bg-[#1b1b2f] text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg"><Plus size={16} className="inline mr-2"/> Add Rule</button>
-                </div>
+        <main className="container contact" style={{ maxWidth: '1190px', marginTop: '100px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><ShieldCheck size={28} /> Privacy Registry</h1>
+                <button onClick={syncRegistry} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#151414' }}>
+                    <RefreshCw className={fetching ? 'animate-spin' : ''} size={20} />
+                </button>
             </div>
-            <div className="space-y-4">
-                {sections.map((node, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                        <div className="col-span-1 relative">
-                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={12}/>
-                            <input type="number" value={node.serial_number} onChange={(e) => {const u = [...sections]; u[index].serial_number = e.target.value; setSections(u);}} className="w-full bg-white py-3 pl-8 rounded-xl text-[12px] font-black outline-none" />
-                        </div>
-                        <div className="col-span-3">
-                            <input type="text" value={node.title} onChange={(e) => {const u = [...sections]; u[index].title = e.target.value; setSections(u);}} className="w-full bg-white py-3 px-4 rounded-xl text-[12px] font-bold uppercase outline-none" placeholder="TITLE" />
-                        </div>
-                        <div className="col-span-6">
-                            <textarea value={node.content} onChange={(e) => {const u = [...sections]; u[index].content = e.target.value; setSections(u);}} className="w-full bg-white py-3 px-4 rounded-xl text-[12px] min-h-[46px] outline-none resize-none" placeholder="CONTENT..." />
-                        </div>
-                        <div className="col-span-2 flex gap-2 justify-end">
-                            <button onClick={() => pushNode(index)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-md shadow-blue-100"><Save size={16} /></button>
-                            <button onClick={() => dropNode(node.id, index)} className="p-3 bg-white border border-slate-200 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                        </div>
+            <div className="contact-wrapper">
+                <section className="contact-details" style={{ flex: '1 1 500px', maxHeight: '800px', overflowY: 'auto' }}>
+                    <h2 style={{ color: '#fff' }}>Active Nodes</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '2rem' }}>
+                        {sections.map((item) => (
+                            <div key={item.id} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', padding: '15px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#3b82f6', fontWeight: '800', fontSize: '0.75rem' }}>NODE #{item.serial_number}</span>
+                                    <button onClick={() => handleDrop(item.id)} style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                                </div>
+                                <h4 style={{ color: '#fff', fontSize: '0.9rem', margin: '5px 0' }}>{item.title}</h4>
+                                <p style={{ color: '#aaa', fontSize: '0.8rem' }}>{item.content}</p>
+                            </div>
+                        ))}
                     </div>
-                ))}
+                </section>
+                <section className="contact-form-section" style={{ flex: '1 1 450px' }}>
+                    <form className="contact-form" onSubmit={handlePush}>
+                        <h2>Execute PUSH</h2>
+                        {status.msg && <div className={`status-msg ${status.type}`}>{status.msg}</div>}
+                        <div className="form-group"><label>Serial Number</label><input type="number" value={newRule.serial_number} onChange={(e)=>setNewRule({...newRule, serial_number: e.target.value})} /></div>
+                        <div className="form-group"><label>Title *</label><input type="text" value={newRule.title} onChange={(e)=>setNewRule({...newRule, title: e.target.value})} required /></div>
+                        <div className="form-group"><label>Content *</label><textarea value={newRule.content} onChange={(e)=>setNewRule({...newRule, content: e.target.value})} style={{ minHeight: '180px' }} required /></div>
+                        <button type="submit" className="btn-submit" disabled={loading}>{loading ? <Loader2 className="animate-spin" size={20} /> : "COMMIT TO REGISTRY"}</button>
+                    </form>
+                </section>
             </div>
-        </div>
+        </main>
     );
 };
 export default AdminPrivacyPolicy;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  FileText, Plus, Trash2, UploadCloud, RefreshCw, 
-  CheckCircle2, AlertCircle, Link2, X, Image as ImageIcon 
+  Trash2, UploadCloud, RefreshCw, CheckCircle2, 
+  AlertCircle, X, Image as ImageIcon, Hash 
 } from 'lucide-react';
 
 const AdminBlog = () => {
@@ -55,144 +55,177 @@ const AdminBlog = () => {
         formData.append('content', content);
 
         setLoading(true);
-        setStatus({ type: '', msg: '' }); // Clear previous status
+        setStatus({ type: '', msg: '' });
 
         try {
             const res = await axios.post('/api/admin/blog', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             if (res.data.success) {
-                setStatus({ type: 'success', msg: 'REGISTRY UPDATED: Post is live.' });
+                setStatus({ type: 'success', msg: 'Message sent successfully!' });
                 setTitle(""); setSlug(""); setExcerpt(""); setContent("");
                 setFile(null); setPreview(null);
                 fetchPosts();
             }
         } catch (err) {
-            setStatus({ type: 'error', msg: 'AUTHORITY REJECTED: Check fields.' });
+            setStatus({ type: 'error', msg: 'Failed to update registry.' });
         } finally {
             setLoading(false);
         }
     };
 
     const handleDrop = async (id) => {
-        if (!window.confirm("EXECUTE DROP?")) return;
+        if (!window.confirm("DROP this post?")) return;
         try {
             await axios.delete(`/api/admin/blog/${id}`);
             fetchPosts();
         } catch (err) {
-            setStatus({ type: 'error', msg: 'DROP COMMAND FAILED' });
+            setStatus({ type: 'error', msg: 'DROP command failed.' });
         }
     };
 
     return (
-        <div className="p-6 bg-[#fcfcfd] min-h-screen font-sans text-slate-900">
-            <header className="max-w-7xl mx-auto mb-8 flex justify-between items-end">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="h-2 w-8 bg-indigo-600 rounded-full" />
-                        <span className="text-[10px] font-black tracking-[0.2em] text-indigo-600 uppercase">System Active</span>
-                    </div>
-                    <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
-                        BLOG <span className="text-slate-400 font-light">AUTHORITY</span>
-                    </h1>
-                </div>
-                <button onClick={fetchPosts} className="p-3 bg-white border border-slate-200 rounded-full hover:shadow-md transition-all">
-                    <RefreshCw size={20} className={`${fetching ? 'animate-spin' : ''} text-slate-500`} />
+        <main 
+            className="container contact" 
+            style={{ maxWidth: '1190px', marginTop: '100px' }}
+        >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h1>Blog Management</h1>
+                <button 
+                    onClick={fetchPosts} 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#151414' }}
+                >
+                    <RefreshCw className={fetching ? 'animate-spin' : ''} size={20} />
                 </button>
-            </header>
+            </div>
 
-            <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div className="lg:col-span-5">
-                    <form onSubmit={handlePush} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm sticky top-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-tighter">
-                                <Plus size={16} className="text-indigo-600" /> Initialize Node
-                            </h2>
+            <div className="contact-wrapper">
+                {/* LEFT COLUMN: REGISTRY LIST (Styled like contact-details) */}
+                <section className="contact-details" style={{ flex: '1 1 350px' }}>
+                    <h2 style={{ color: '#fff' }}>Active Registry</h2>
+                    <p style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                        Manage active transmissions ({posts.length} nodes).
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+                        {posts.map(post => (
+                            <div key={post.id} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '15px', 
+                                background: 'rgba(255,255,255,0.05)', 
+                                padding: '10px', 
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}>
+                                <div style={{ width: '50px', height: '50px', borderRadius: '4px', overflow: 'hidden', background: '#222' }}>
+                                    {post.image_url ? (
+                                        <img src={post.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                    ) : (
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                            <ImageIcon size={18} color="#444" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h4 style={{ margin: 0, color: '#fff', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.title}</h4>
+                                    <span style={{ color: '#f2ca18', fontSize: '0.75rem', fontFamily: 'monospace' }}>/{post.slug}</span>
+                                </div>
+                                <button onClick={() => handleDrop(post.id)} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer' }}>
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* RIGHT COLUMN: FORM (Styled like contact-form-section) */}
+                <section className="contact-form-section" style={{ flex: '1 1 500px' }}>
+                    <form className="contact-form" onSubmit={handlePush} noValidate>
+                        <h2>Create New Post</h2>
+
+                        {status.msg && (
+                            <div style={{ 
+                                color: status.type === 'success' ? 'green' : 'red', 
+                                padding: '10px', 
+                                backgroundColor: status.type === 'success' ? '#f0fff4' : '#fff5f5',
+                                borderRadius: '4px',
+                                marginBottom: '1rem',
+                                fontSize: '0.9rem',
+                                fontWeight: '600'
+                            }}>
+                                {status.msg}
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label>Post Headline *</label>
+                            <input 
+                                type="text" 
+                                value={title} 
+                                onChange={handleTitleChange} 
+                                placeholder="Enter title" 
+                                required 
+                            />
                         </div>
 
-                        <div className="space-y-5">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
-                                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Headline</label>
-                                    <input className="w-full bg-slate-50 border-none p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold text-sm" placeholder="Post title..." value={title} onChange={handleTitleChange} required />
+                        <div className="form-group">
+                            <label>Registry Slug</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem', background: '#eee', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                <Hash size={14} /> <span>{slug || 'auto-generated'}</span>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Cover Image</label>
+                            {!preview ? (
+                                <div style={{ border: '2px dashed #ccc', borderRadius: '8px', padding: '20px', textAlign: 'center', position: 'relative' }}>
+                                    <UploadCloud style={{ margin: '0 auto 10px' }} size={24} color="#999" />
+                                    <p style={{ fontSize: '0.8rem', color: '#999' }}>Click to upload asset</p>
+                                    <input type="file" onChange={handleFileChange} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
                                 </div>
-                                <div className="col-span-2">
-                                    <div className="flex items-center gap-2 bg-indigo-50/50 p-2 px-3 rounded-lg border border-indigo-100">
-                                        <Link2 size={12} className="text-indigo-400" />
-                                        <input className="bg-transparent border-none outline-none text-[11px] font-mono text-indigo-600 w-full" value={slug} readOnly />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Visual Asset</label>
-                                {!preview ? (
-                                    <div className="relative border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center group hover:border-indigo-400 transition-colors cursor-pointer">
-                                        <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                        <UploadCloud size={20} className="text-slate-300 group-hover:text-indigo-500 mb-1" />
-                                        <span className="text-[9px] font-bold text-slate-400">UPLOAD IMAGE</span>
-                                    </div>
-                                ) : (
-                                    <div className="relative h-24 rounded-2xl overflow-hidden group">
-                                        <img src={preview} className="w-full h-full object-cover" alt="Preview" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <button type="button" onClick={() => {setFile(null); setPreview(null);}} className="bg-white p-2 rounded-full text-rose-500 hover:scale-110 transition-transform"><X size={16}/></button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Excerpt & Content</label>
-                                <textarea className="w-full bg-slate-50 border-none p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs h-16 mb-2" placeholder="Summary..." value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
-                                <textarea className="w-full bg-slate-50 border-none p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs h-32" placeholder="Body content..." value={content} onChange={(e) => setContent(e.target.value)} required />
-                            </div>
-
-                            <button disabled={loading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-indigo-600 shadow-lg shadow-indigo-200 transition-all disabled:bg-slate-200">
-                                {loading ? <RefreshCw className="animate-spin mx-auto" size={18} /> : "COMMIT TO REGISTRY"}
-                            </button>
-
-                            {/* ✅ ERROR/SUCCESS STATUS BELOW THE BUTTON */}
-                            {status.msg && (
-                                <div className={`flex items-center gap-2 p-3 rounded-xl border animate-in fade-in slide-in-from-top-2 duration-300 ${
-                                    status.type === 'success' 
-                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                                    : 'bg-rose-50 border-rose-100 text-rose-700'
-                                }`}>
-                                    {status.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                                    <span className="text-[10px] font-black uppercase tracking-wider">{status.msg}</span>
-                                    <button onClick={() => setStatus({type:'', msg:''})} className="ml-auto opacity-50 hover:opacity-100">
-                                        <X size={12} />
+                            ) : (
+                                <div style={{ position: 'relative', height: '100px', borderRadius: '8px', overflow: 'hidden' }}>
+                                    <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" />
+                                    <button onClick={() => {setFile(null); setPreview(null);}} style={{ position: 'absolute', top: '5px', right: '5px', background: 'red', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                        <X size={14} />
                                     </button>
                                 </div>
                             )}
                         </div>
-                    </form>
-                </div>
 
-                <div className="lg:col-span-7 space-y-4">
-                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Registry Nodes ({posts.length})</h2>
-                    {posts.map(post => (
-                        <div key={post.id} className="group bg-white border border-slate-200 p-3 rounded-2xl flex gap-4 items-center hover:border-indigo-200 transition-all">
-                            <div className="h-16 w-16 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-50">
-                                {post.image_url ? (
-                                    <img src={post.image_url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" alt="" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon size={20}/></div>
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-sm text-slate-800 truncate">{post.title}</h3>
-                                <p className="text-[10px] font-mono text-indigo-500 mt-0.5">/{post.slug}</p>
-                            </div>
-                            <button onClick={() => handleDrop(post.id)} className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                                <Trash2 size={18} />
-                            </button>
+                        <div className="form-group">
+                            <label>Excerpt (Summary)</label>
+                            <textarea 
+                                rows="2" 
+                                value={excerpt} 
+                                onChange={(e) => setExcerpt(e.target.value)} 
+                                placeholder="Short description..." 
+                            />
                         </div>
-                    ))}
-                </div>
-            </main>
-        </div>
+
+                        <div className="form-group">
+                            <label>Content *</label>
+                            <textarea 
+                                rows="6" 
+                                value={content} 
+                                onChange={(e) => setContent(e.target.value)} 
+                                placeholder="Write the full post content..." 
+                                required 
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            className="btn-submit" 
+                            disabled={loading}
+                        >
+                            {loading ? 'Processing...' : 'Commit Post'}
+                        </button>
+                    </form>
+                </section>
+            </div>
+        </main>
     );
 };
 

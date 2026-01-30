@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Layers, 
-  Plus, 
   Trash2, 
   UploadCloud, 
   RefreshCw, 
-  CheckCircle2, 
-  AlertCircle,
-  Image as ImageIcon,
-  X
+  X, 
+  Loader2, 
+  Image as ImageIcon 
 } from 'lucide-react';
 
 const AdminServices = () => {
@@ -17,11 +15,12 @@ const AdminServices = () => {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [file, setFile] = useState(null);
-    const [preview, setPreview] = useState(null); 
+    const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [status, setStatus] = useState({ type: '', msg: '' });
 
+    // Auto-clear status alerts
     useEffect(() => {
         if (status.msg) {
             const timer = setTimeout(() => setStatus({ type: '', msg: '' }), 5000);
@@ -36,7 +35,6 @@ const AdminServices = () => {
             if (res.data.success) setServices(res.data.data);
         } catch (err) {
             console.error("Registry Fetch Failed:", err);
-            setStatus({ type: 'error', msg: 'Failed to sync with Registry.' });
         } finally {
             setFetching(false);
         }
@@ -48,16 +46,14 @@ const AdminServices = () => {
         const selected = e.target.files[0];
         if (selected) {
             setFile(selected);
-            setPreview(URL.createObjectURL(selected)); 
+            setPreview(URL.createObjectURL(selected));
         }
     };
 
     const handlePush = async (e) => {
         e.preventDefault();
-        // ✅ Image asset is no longer required for PUSH.
-
         const formData = new FormData();
-        if (file) formData.append('image', file); 
+        if (file) formData.append('image', file);
         formData.append('title', title);
         formData.append('description', description);
 
@@ -66,29 +62,25 @@ const AdminServices = () => {
 
         try {
             const res = await axios.post('/api/admin/services', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                withCredentials: true
             });
             if (res.data.success) {
                 setStatus({ type: 'success', msg: 'REGISTRY PUSH: Service Node active.' });
-                setTitle(""); 
-                setDescription(""); 
-                setFile(null);
-                setPreview(null);
+                setTitle(""); setDescription(""); setFile(null); setPreview(null);
                 fetchServices();
             }
         } catch (err) {
-            const errorMsg = err.response?.data?.error || 'PUSH Rejected by Authority.';
-            setStatus({ type: 'error', msg: errorMsg });
+            setStatus({ type: 'error', msg: 'PUSH Rejected by Authority.' });
         } finally {
             setLoading(false);
         }
     };
 
     const handleDrop = async (id) => {
-        if (!window.confirm("EXECUTE DROP: Are you sure you want to purge this service?")) return;
-        
+        if (!window.confirm("CRITICAL: Confirm REGISTRY DROP? This service node will be purged.")) return;
         try {
-            const res = await axios.delete(`/api/admin/services/${id}`);
+            const res = await axios.delete(`/api/admin/services/${id}`, { withCredentials: true });
             if (res.data.success) {
                 setStatus({ type: 'success', msg: 'REGISTRY DROP: Node Purged.' });
                 fetchServices();
@@ -99,129 +91,150 @@ const AdminServices = () => {
     };
 
     return (
-        <div className="p-8 bg-[#f8fafc] min-h-screen font-sans">
-            <header className="mb-10 flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
-                        <Layers className="text-rose-600" size={32} />
-                        SERVICES AUTHORITY
-                    </h1>
-                    <p className="text-slate-500 font-medium mt-1">Registry Management for Agency Offerings</p>
-                </div>
-                {fetching && <RefreshCw className="animate-spin text-rose-500" />}
-            </header>
+        <main 
+            className="container contact" 
+            style={{ maxWidth: '1190px', marginTop: '100px' }}
+        >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Layers size={28} /> Services Authority
+                </h1>
+                <button 
+                    onClick={fetchServices} 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#151414' }}
+                >
+                    <RefreshCw className={fetching ? 'animate-spin' : ''} size={20} />
+                </button>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                <div className="lg:col-span-4">
-                    <form onSubmit={handlePush} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm sticky top-8">
-                        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Initialize New Node</h2>
-                        
-                        <div className="space-y-5">
-                            {status.msg && (
-                                <div className={`p-4 rounded-xl flex items-start gap-3 text-sm font-bold border ${
-                                    status.type === 'success' 
-                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                                    : 'bg-rose-50 border-rose-100 text-rose-700'
-                                } animate-in fade-in slide-in-from-top-2 duration-300`}>
-                                    {status.type === 'success' ? <CheckCircle2 size={18} className="shrink-0" /> : <AlertCircle size={18} className="shrink-0" />}
-                                    <span className="flex-1">{status.msg}</span>
-                                    <button type="button" onClick={() => setStatus({type:'', msg:''})}><X size={14} /></button>
-                                </div>
-                            )}
+            <div className="contact-wrapper">
+                {/* LEFT COLUMN: ACTIVE SERVICES REGISTRY */}
+                <section className="contact-details" style={{ flex: '1 1 450px', maxHeight: '850px', overflowY: 'auto' }}>
+                    <h2 style={{ color: '#fff' }}>Active Offerings</h2>
+                    <p style={{ color: '#ccc', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                        Operational service nodes currently live in the system ({services.length}).
+                    </p>
 
-                            <div>
-                                <label className="block text-xs font-bold mb-2 text-slate-700 uppercase">Service Title</label>
-                                <input 
-                                    className="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-rose-500 transition-all font-semibold" 
-                                    placeholder="e.g. Digital Strategy" 
-                                    value={title} 
-                                    onChange={(e) => setTitle(e.target.value)} 
-                                    required 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold mb-2 text-slate-700 uppercase">Description</label>
-                                <textarea 
-                                    className="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-rose-500 transition-all h-28" 
-                                    placeholder="Brief overview of the service..." 
-                                    value={description} 
-                                    onChange={(e) => setDescription(e.target.value)} 
-                                    required 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold mb-2 text-slate-700 uppercase">Visual Node (Optional)</label>
-                                {!preview ? (
-                                    <div className="relative group cursor-pointer border-2 border-dashed border-slate-200 p-8 rounded-xl hover:border-rose-400 transition-all text-center">
-                                        <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                        <UploadCloud size={32} className="text-slate-300 mx-auto mb-2 group-hover:text-rose-500" />
-                                        <span className="text-xs text-slate-500 font-bold">Select Service Image</span>
-                                    </div>
-                                ) : (
-                                    <div className="relative rounded-xl overflow-hidden border border-slate-200 h-32">
-                                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                                        <button 
-                                            type="button"
-                                            onClick={() => {setFile(null); setPreview(null);}}
-                                            className="absolute top-2 right-2 bg-rose-500 text-white p-1 rounded-full shadow-lg"
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <button 
-                                disabled={loading}
-                                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-rose-600 transition-all disabled:bg-slate-300"
-                            >
-                                {loading ? <RefreshCw className="animate-spin" size={18} /> : <Plus size={18} />}
-                                {loading ? "COMMITTING PUSH..." : "EXECUTE SERVICE PUSH"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <div className="lg:col-span-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         {services.length === 0 && !fetching && (
-                            <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl text-slate-400 font-medium bg-white">
-                                <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
-                                No active services found in registry.
+                            <div style={{ color: '#666', textAlign: 'center', padding: '40px', border: '1px dashed #444', borderRadius: '12px' }}>
+                                No active service nodes found.
                             </div>
                         )}
                         
-                        {services.map(s => (
-                            <div key={s.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
-                                <div className="h-44 overflow-hidden bg-slate-100 relative">
+                        {services.map((s) => (
+                            <div key={s.id} style={{ 
+                                background: 'rgba(255,255,255,0.05)', 
+                                borderRadius: '12px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{ height: '120px', background: '#1a1a1a', position: 'relative' }}>
                                     {s.image_url ? (
-                                        <img src={s.image_url} alt={s.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                        <img src={s.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} alt={s.title} />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-slate-50"><ImageIcon className="text-slate-300" /></div>
+                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <ImageIcon size={32} color="#333" />
+                                        </div>
                                     )}
-                                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-md text-[10px] font-black text-slate-900 border border-slate-200 uppercase">Node #{s.id}</div>
+                                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.5)', padding: '4px 8px', borderRadius: '4px' }}>
+                                        <span style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold' }}>ID: {s.id}</span>
+                                    </div>
                                 </div>
-                                <div className="p-6">
-                                    <h3 className="font-bold text-lg text-slate-900">{s.title}</h3>
-                                    <p className="text-slate-500 text-sm mt-2 line-clamp-3 leading-relaxed">{s.description}</p>
-                                    
-                                    <div className="mt-6 pt-5 border-t border-slate-50 flex justify-end">
+                                <div style={{ padding: '15px' }}>
+                                    <h4 style={{ color: '#fff', margin: '0 0 8px 0', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{s.title}</h4>
+                                    <p style={{ color: '#aaa', fontSize: '0.8rem', lineHeight: '1.4', marginBottom: '15px' }}>
+                                        {s.description}
+                                    </p>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
                                         <button 
-                                            onClick={() => handleDrop(s.id)} 
-                                            className="text-rose-500 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors flex items-center gap-2 font-black text-xs uppercase tracking-tighter"
+                                            onClick={() => handleDrop(s.id)}
+                                            style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 'bold' }}
                                         >
-                                            <Trash2 size={16} /> Purge Node
+                                            <Trash2 size={14} /> DROP NODE
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                </section>
+
+                {/* RIGHT COLUMN: SERVICE PUSH FORM */}
+                <section className="contact-form-section" style={{ flex: '1 1 550px' }}>
+                    <form className="contact-form" onSubmit={handlePush} noValidate>
+                        <h2>Initialize Node</h2>
+
+                        {status.msg && (
+                            <div style={{ 
+                                color: status.type === 'success' ? '#166534' : '#991b1b', 
+                                padding: '12px', 
+                                backgroundColor: status.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                                borderRadius: '8px',
+                                marginBottom: '1.5rem',
+                                fontSize: '0.85rem',
+                                border: `1px solid ${status.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+                            }}>
+                                {status.msg}
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label>Service Title *</label>
+                            <input 
+                                type="text" 
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="e.g. Precision Agronomy" 
+                                required 
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Service Description *</label>
+                            <textarea 
+                                rows="5" 
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Detail the scope of this service node..." 
+                                required 
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Visual Asset (Optional)</label>
+                            {!preview ? (
+                                <div style={{ 
+                                    border: '2px dashed #ccc', borderRadius: '8px', padding: '40px 20px', 
+                                    textAlign: 'center', position: 'relative', backgroundColor: '#fafafa'
+                                }}>
+                                    <UploadCloud style={{ margin: '0 auto 10px' }} size={28} color="#999" />
+                                    <p style={{ fontSize: '0.8rem', color: '#999' }}>Click to upload service image</p>
+                                    <input type="file" onChange={handleFileChange} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+                                </div>
+                            ) : (
+                                <div style={{ position: 'relative', height: '180px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd' }}>
+                                    <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" />
+                                    <button 
+                                        type="button" onClick={() => {setFile(null); setPreview(null);}} 
+                                        style={{ position: 'absolute', top: '10px', right: '10px', background: '#000', color: '#fff', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button 
+                            type="submit" className="btn-submit" disabled={loading}
+                            style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : "EXECUTE SERVICE PUSH"}
+                        </button>
+                    </form>
+                </section>
             </div>
-        </div>
+        </main>
     );
 };
 

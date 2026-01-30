@@ -177,13 +177,17 @@ const Landing = () => {
             The premier visual production house in Ethiopia. From high-fashion photography 
             to cinematic commercial production, we define the aesthetic of the modern capital.
           </p>
-          <div style={{
-            marginTop: '20px',
-            color: '#ffcc00',
-            fontSize: '14px',
-            fontWeight: '900',
-            animation: 'pulse 2s infinite'
-          }}>
+          <div 
+            style={{
+              marginTop: '20px',
+              color: '#ffcc00',
+              fontSize: '14px',
+              fontWeight: '900',
+              animation: 'pulse 2s infinite',
+              cursor: 'pointer'
+            }}
+            onClick={() => navigate('/register')}
+          >
             ↑ NEW CREATIVES CLICK "JOIN THE AGENCY"
           </div>
         </main>

@@ -31,47 +31,42 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
       boxShadow: '10px 0 25px rgba(0,0,0,0.03)',
       animation: 'slideIn 0.25s ease-out',
     },
-    header: { padding: '24px 20px', borderBottom: '1px solid #f4f4f5' },
-    modeTag: {
-      display: 'inline-block',
-      padding: '2px 8px',
-      backgroundColor: 'rgba(225, 29, 72, 0.08)',
-      color: '#e11d48',
-      fontSize: '10px',
-      fontWeight: '800',
-      borderRadius: '4px',
-      textTransform: 'uppercase',
-      letterSpacing: '1px',
-      marginBottom: '8px'
+    header: { padding: '30px 20px 20px 20px', borderBottom: '1px solid #f4f4f5' },
+    title: { 
+      fontSize: '20px', 
+      fontWeight: '900', 
+      color: '#09090b', 
+      margin: 0, 
+      letterSpacing: '-0.5px',
+      textTransform: 'uppercase'
     },
-    title: { fontSize: '18px', fontWeight: '800', color: '#09090b', margin: 0 },
     scrollArea: { flex: 1, overflowY: 'auto', padding: '20px 12px' },
     groupLabel: {
       fontSize: '11px',
-      fontWeight: '600',
+      fontWeight: '800',
       color: '#a1a1aa',
       textTransform: 'uppercase',
-      letterSpacing: '0.05em',
+      letterSpacing: '0.1em',
       margin: '24px 0 8px 12px',
     },
     navItem: {
       textDecoration: 'none',
       color: '#3f3f46',
-      padding: '10px 12px',
-      borderRadius: '6px',
+      padding: '12px 14px',
+      borderRadius: '8px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       fontSize: '14px',
-      fontWeight: '500',
+      fontWeight: '600',
       marginBottom: '4px',
       transition: 'all 0.15s ease',
     },
     active: {
-      backgroundColor: '#f4f4f5',
-      color: '#09090b',
+      backgroundColor: '#09090b', 
+      color: '#ffffff',
       fontWeight: '700',
-      boxShadow: 'inset 4px 0 0 #e11d48',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
     },
     footer: { padding: '20px', borderTop: '1px solid #f4f4f5', background: '#fafafa' }
   };
@@ -84,7 +79,7 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
       className="sidebar-link-action"
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Icon size={18} strokeWidth={2} color={color || 'inherit'} />
+        <Icon size={18} strokeWidth={2.5} color={color || 'inherit'} />
         {label}
       </div>
       <ChevronRight size={14} className="chevron-icon" opacity={0.3} />
@@ -96,7 +91,7 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
       <style>
         {`
           @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-          .sidebar-link-action:hover { background-color: #f4f4f5; color: #000 !important; }
+          .sidebar-link-action:hover:not(.active) { background-color: #f4f4f5; color: #000 !important; }
           .sidebar-link-action:hover .chevron-icon { opacity: 0.8 !important; transform: translateX(2px); }
         `}
       </style>
@@ -104,7 +99,6 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
       <div style={styles.overlay} onClick={closeSidebar}>
         <div style={styles.sidebar} onClick={(e) => e.stopPropagation()}>
           <div style={styles.header}>
-            <div style={styles.modeTag}>{mode} Authority</div>
             <h2 style={styles.title}>
               {mode === 'terminal' && "Content Engine"}
               {mode === 'team' && "Personnel Registry"}
@@ -116,7 +110,7 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
           </div>
 
           <div style={styles.scrollArea}>
-            {/* ✅ TERMINAL MODE - UPDATED */}
+            {/* ✅ TERMINAL MODE */}
             {mode === 'terminal' && (
               <>
                 <div style={styles.groupLabel}>Landing Configuration</div>
@@ -125,7 +119,6 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
 
                 <div style={styles.groupLabel}>Portfolio & Team Assets</div>
                 <SidebarLink to="/admin/portfolio" icon={PlusCircle} label="Manage Portfolio" />
-                {/* Team link added here so it's visible in Terminal mode */}
                 <SidebarLink to="/admin/team" icon={UsersIcon} label="Manage Team" />
                 
                 <div style={styles.groupLabel}>Services Hub</div>
@@ -180,7 +173,8 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
             {mode === 'settings' && (
               <>
                 <div style={styles.groupLabel}>Identity</div>
-                <SidebarLink to="/admin/dashboard" icon={UserCircle} label="Dashboard Home" />
+                <SidebarLink to="/admin/dashboard" icon={Home} label="Dashboard Home" />
+                <SidebarLink to="/admin/profile" icon={UserCircle} label="Edit Profile" /> {/* ✅ Added Admin Profile Link */}
                 <div style={styles.groupLabel}>Session Control</div>
                 <SidebarLink to="/login" icon={LogOut} label="DROP Session" color="#e11d48" />
               </>
@@ -188,8 +182,8 @@ const DynamicSidebar = ({ mode, closeSidebar }) => {
           </div>
 
           <div style={styles.footer}>
-            <Link to="/home" style={{ color: '#71717a', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700' }}>
-              <Home size={16} /> <span>EXIT TO PUBLIC SITE</span>
+            <Link to="/home" style={{ color: '#71717a', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800' }}>
+              <Home size={16} /> <span>Home</span>
             </Link>
           </div>
         </div>

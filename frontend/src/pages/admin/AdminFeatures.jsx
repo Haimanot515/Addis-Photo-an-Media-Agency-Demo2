@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UploadCloud, Trash2, ShieldAlert, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { UploadCloud, Trash2, Image as ImageIcon, Loader2, RefreshCw, X } from 'lucide-react';
 
 const AdminFeatures = () => {
     const [features, setFeatures] = useState([]);
     const [file, setFile] = useState(null);
+    const [preview, setPreview] = useState(null);
     const [altText, setAltText] = useState("");
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
+    const [status, setStatus] = useState({ type: '', msg: '' });
 
-    // ───── REGISTRY READ: Fetch nodes from Authority ─────
     const fetchFeatures = async () => {
+        setFetching(true);
         try {
-            // Adjust this URL if your public route is different
             const res = await axios.get('/api/admin/features');
             if (res.data?.success) {
                 setFeatures(res.data.data || []);
@@ -29,16 +30,28 @@ const AdminFeatures = () => {
         fetchFeatures();
     }, []);
 
-    // ───── AUTHORITY PUSH: Add new node ─────
+    const handleFileChange = (e) => {
+        const selected = e.target.files[0];
+        if (selected) {
+            setFile(selected);
+            setPreview(URL.createObjectURL(selected));
+        }
+    };
+
     const handlePush = async (e) => {
         e.preventDefault();
-        if (!file || !altText) return alert("Validation Failed: Image and Alt Text required.");
+        if (!file || !altText) {
+            setStatus({ type: 'error', msg: "Image and Description required." });
+            return;
+        }
 
         const formData = new FormData();
         formData.append('image', file);
         formData.append('alt', altText);
 
         setLoading(true);
+        setStatus({ type: '', msg: '' });
+
         try {
             const res = await axios.post('/api/admin/features', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -46,24 +59,22 @@ const AdminFeatures = () => {
             });
 
             if (res.data.success) {
+                setStatus({ type: 'success', msg: 'REGISTRY PUSH: Node committed.' });
                 setAltText("");
                 setFile(null);
-                // Reset file input manually
+                setPreview(null);
                 e.target.reset();
                 fetchFeatures();
-                alert("REGISTRY PUSH: Node successfully committed.");
             }
         } catch (err) {
-            console.error("Push Error:", err.response?.data || err.message);
-            alert("PUSH Failure: Authority rejected the request.");
+            setStatus({ type: 'error', msg: 'PUSH Failure: Authority rejected.' });
         } finally {
             setLoading(false);
         }
     };
 
-    // ───── AUTHORITY DROP: Purge node ─────
     const handleDrop = async (id) => {
-        if (!window.confirm("WARNING: Are you sure you want to DROP this asset from the registry?")) return;
+        if (!window.confirm("EXECUTE DROP: Purge this asset from the registry?")) return;
         
         try {
             const res = await axios.delete(`/api/admin/features/${id}`, { withCredentials: true });
@@ -71,122 +82,136 @@ const AdminFeatures = () => {
                 fetchFeatures();
             }
         } catch (err) {
-            console.error("Drop Error:", err);
-            alert("DROP Failure: Asset could not be purged.");
+            setStatus({ type: 'error', msg: 'DROP Failure: Asset not purged.' });
         }
     };
 
     return (
-        <div style={{ padding: '40px 20px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
-                <ShieldAlert size={32} color="#e11d48" />
-                <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#09090b', margin: 0 }}>
-                    FEATURED WORKS AUTHORITY
-                </h2>
+        <main 
+            className="container contact" 
+            style={{ maxWidth: '1190px', marginTop: '100px' }}
+        >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h1>Featured Works</h1>
+                <button 
+                    onClick={fetchFeatures} 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#151414' }}
+                >
+                    <RefreshCw className={fetching ? 'animate-spin' : ''} size={20} />
+                </button>
             </div>
 
-            {/* PUSH INTERFACE */}
-            <div style={{ backgroundColor: '#fff', border: '1px solid #e4e4e7', borderRadius: '12px', padding: '24px', marginBottom: '40px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                <h3 style={{ marginTop: 0, fontSize: '18px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <UploadCloud size={20} /> PUSH NEW ASSET
-                </h3>
-                <form onSubmit={handlePush}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#71717a', marginBottom: '8px' }}>IMAGE FILE</label>
-                            <input 
-                                type="file" 
-                                onChange={(e) => setFile(e.target.files[0])} 
-                                style={{ width: '100%', padding: '8px', border: '1px solid #e4e4e7', borderRadius: '6px', fontSize: '14px' }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#71717a', marginBottom: '8px' }}>ALT TEXT / DESCRIPTION</label>
+            <div className="contact-wrapper">
+                {/* LEFT COLUMN: LIVE REGISTRY (Styled like contact-details) */}
+                <section className="contact-details" style={{ flex: '1 1 400px' }}>
+                    <h2 style={{ color: '#fff' }}>Live Registry</h2>
+                    <p style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                        Active asset nodes ({features.length}).
+                    </p>
+
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr 1fr', 
+                        gap: '15px', 
+                        marginTop: '2rem' 
+                    }}>
+                        {features.map((item) => (
+                            <div key={item.id} style={{ 
+                                background: 'rgba(255,255,255,0.05)', 
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{ height: '100px', background: '#222' }}>
+                                    <img src={item.src} alt={item.alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <div style={{ padding: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#fff', fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }}>
+                                        {item.alt}
+                                    </span>
+                                    <button onClick={() => handleDrop(item.id)} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer' }}>
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* RIGHT COLUMN: PUSH FORM (Styled like contact-form-section) */}
+                <section className="contact-form-section" style={{ flex: '1 1 450px' }}>
+                    <form className="contact-form" onSubmit={handlePush} noValidate>
+                        <h2>Push New Asset</h2>
+
+                        {status.msg && (
+                            <div style={{ 
+                                color: status.type === 'success' ? 'green' : 'red', 
+                                padding: '10px', 
+                                backgroundColor: status.type === 'success' ? '#f0fff4' : '#fff5f5',
+                                borderRadius: '4px',
+                                marginBottom: '1rem',
+                                fontSize: '0.85rem'
+                            }}>
+                                {status.msg}
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label>Asset Description (Alt Text) *</label>
                             <input 
                                 type="text" 
-                                placeholder="Describe the work..." 
                                 value={altText}
                                 onChange={(e) => setAltText(e.target.value)}
-                                style={{ width: '100%', padding: '10px', border: '1px solid #e4e4e7', borderRadius: '6px', fontSize: '14px' }}
+                                placeholder="Describe the work..." 
+                                required 
                             />
                         </div>
-                    </div>
-                    <button 
-                        type="submit" 
-                        disabled={loading}
-                        style={{ 
-                            backgroundColor: '#09090b', 
-                            color: '#fff', 
-                            padding: '12px 24px', 
-                            border: 'none', 
-                            borderRadius: '6px', 
-                            fontWeight: '700', 
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : null}
-                        {loading ? "COMMITTING PUSH..." : "PUSH TO REGISTRY"}
-                    </button>
-                </form>
+
+                        <div className="form-group">
+                            <label>Image Asset *</label>
+                            {!preview ? (
+                                <div style={{ 
+                                    border: '2px dashed #ccc', 
+                                    borderRadius: '8px', 
+                                    padding: '40px', 
+                                    textAlign: 'center', 
+                                    position: 'relative',
+                                    backgroundColor: '#fafafa'
+                                }}>
+                                    <UploadCloud style={{ margin: '0 auto 10px' }} size={32} color="#999" />
+                                    <p style={{ fontSize: '0.8rem', color: '#999' }}>Click to select file</p>
+                                    <input 
+                                        type="file" 
+                                        onChange={handleFileChange} 
+                                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} 
+                                    />
+                                </div>
+                            ) : (
+                                <div style={{ position: 'relative', height: '200px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eee' }}>
+                                    <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" />
+                                    <button 
+                                        type="button"
+                                        onClick={() => {setFile(null); setPreview(null);}} 
+                                        style={{ position: 'absolute', top: '10px', right: '10px', background: '#000', color: '#fff', border: 'none', borderRadius: '50%', padding: '5px', cursor: 'pointer' }}
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            className="btn-submit" 
+                            disabled={loading}
+                            style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : "PUSH TO REGISTRY"}
+                        </button>
+                    </form>
+                </section>
             </div>
-
-            {/* DROP / INVENTORY INTERFACE */}
-            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ImageIcon size={20} /> LIVE REGISTRY NODES
-            </h3>
-
-            {fetching ? (
-                <p>Synchronizing with Authority...</p>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
-                    {features.length > 0 ? features.map((item) => (
-                        <div key={item.id} style={{ border: '1px solid #e4e4e7', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#fff', transition: 'transform 0.2s' }}>
-                            <div style={{ height: '160px', overflow: 'hidden', backgroundColor: '#f4f4f5' }}>
-                                <img 
-                                    src={item.src} 
-                                    alt={item.alt} 
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                />
-                            </div>
-                            <div style={{ padding: '15px' }}>
-                                <p style={{ fontSize: '14px', fontWeight: '500', color: '#27272a', margin: '0 0 15px 0', minHeight: '40px' }}>
-                                    {item.alt}
-                                </p>
-                                <button 
-                                    onClick={() => handleDrop(item.id)}
-                                    style={{ 
-                                        width: '100%', 
-                                        padding: '10px', 
-                                        backgroundColor: '#fff', 
-                                        color: '#e11d48', 
-                                        border: '1px solid #e11d48', 
-                                        borderRadius: '6px', 
-                                        fontWeight: '700', 
-                                        fontSize: '12px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px'
-                                    }}
-                                    onMouseEnter={(e) => { e.target.style.backgroundColor = '#e11d48'; e.target.style.color = '#fff'; }}
-                                    onMouseLeave={(e) => { e.target.style.backgroundColor = '#fff'; e.target.style.color = '#e11d48'; }}
-                                >
-                                    <Trash2 size={14} /> DROP ASSET
-                                </button>
-                            </div>
-                        </div>
-                    )) : (
-                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#a1a1aa', border: '2px dashed #e4e4e7', borderRadius: '12px' }}>
-                            No active nodes in the registry.
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+        </main>
     );
 };
 

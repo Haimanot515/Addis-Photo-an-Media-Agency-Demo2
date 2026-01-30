@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Trash2, UserX, UserCheck, Shield, Search, 
-  RotateCcw, ChevronDown, BellRing, Loader2, 
-  Layers, Activity, Cpu, Phone, Mail, User
+  Trash2, UserX, Shield, Search, 
+  RotateCcw, ChevronDown, BellRing, 
+  Phone, Mail, User, ShieldCheck,
+  Activity, Users, Loader2
 } from 'lucide-react';
 
 const AdminUsers = () => {
+    const [time, setTime] = useState(new Date());
     const [users, setUsers] = useState([]);
     const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, suspended: 0, admins: 0 });
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
+    const [loading, setLoading] = useState(true);
     const [loadingId, setLoadingId] = useState(null);
     const [notification, setNotification] = useState({ show: false, message: "", type: "" });
 
@@ -37,6 +40,8 @@ const AdminUsers = () => {
             }
         } catch (err) {
             console.error("Registry Sync Failure");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -45,8 +50,14 @@ const AdminUsers = () => {
         return () => clearTimeout(delayDebounce);
     }, [searchTerm]);
 
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     const handleAction = async (method, url, body = {}, actionLabel = "Action", id = null) => {
-        if (url.includes('delete') && !window.confirm("EXECUTE DROP: Permanent removal of node?")) return;
+        if (method.toLowerCase() === 'delete' && !window.confirm("EXECUTE DROP: Permanent removal of portfolio user?")) return;
+        
         setLoadingId(id || url);
         try {
             const token = localStorage.getItem('token');
@@ -67,147 +78,222 @@ const AdminUsers = () => {
         ? users 
         : users.filter(u => u.account_status?.toUpperCase() === statusFilter);
 
+    if (loading) {
+        return (
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f7f6' }}>
+                <Loader2 className="animate-spin text-[#e11d48]" size={40} />
+            </div>
+        );
+    }
+
     return (
-        <div className="bg-[#f4f7fe] min-h-screen font-sans text-[#1b1b2f] p-4 md:p-8">
-            
-            {/* NOTIFICATION TOAST */}
-            {notification.show && (
-                <div className="fixed top-10 right-10 z-[100] animate-in slide-in-from-top-5 duration-300">
-                    <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-[#1b1b2f] text-white shadow-2xl border border-white/10 backdrop-blur-xl">
-                        <div className="bg-[#0866ff] p-2 rounded-lg"><BellRing size={16} /></div>
-                        <span className="text-[11px] font-black uppercase tracking-[2px]">{notification.message}</span>
-                    </div>
-                </div>
-            )}
+        <div className="admin-page-root">
+            <style>
+                {`
+                    .admin-page-root {
+                        margin-top: 78px;
+                        margin-left: 70px;
+                        padding: 0 40px 100px 40px;
+                        background: #f4f7f6;
+                        font-family: 'Inter', sans-serif;
+                        color: #1e293b;
+                        min-height: 100vh;
+                        width: calc(100% - 70px);
+                    }
+                    .hero-gradient { 
+                        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+                        padding: 60px 80px; 
+                        border-radius: 40px; 
+                        color: white; 
+                        box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15);
+                        margin-bottom: 60px;
+                        width: 100%;
+                    }
+                    .glass-card {
+                        background: #ffffff;
+                        border-radius: 24px;
+                        padding: 35px;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.02);
+                        border: 1px solid #eef2f1;
+                        width: 100%;
+                    }
+                    .status-badge {
+                        background: rgba(225, 29, 72, 0.15);
+                        padding: 8px 20px;
+                        border-radius: 50px;
+                        display: inline-block;
+                        font-size: 11px;
+                        font-weight: bold;
+                        color: #e11d48;
+                        margin-bottom: 20px;
+                        border: 1px solid rgba(225, 29, 72, 0.2);
+                        backdrop-filter: blur(10px);
+                    }
+                    .section-label {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: #e11d48;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                        margin-bottom: 10px;
+                        display: block;
+                    }
+                    .registry-container {
+                        width: 100%;
+                        background: white;
+                        border-radius: 40px;
+                        border: 1px solid #eef2f1;
+                        box-shadow: 0 20px 50px rgba(0,0,0,0.03);
+                        margin-top: 40px;
+                    }
+                    .full-table {
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 0;
+                    }
+                    .full-table th {
+                        padding: 30px 40px; /* High Equidistance */
+                        text-align: left;
+                        background: #fafbfc;
+                        border-bottom: 1px solid #f1f5f9;
+                    }
+                    .full-table td {
+                        padding: 25px 40px; /* High Equidistance */
+                        border-bottom: 1px solid #f8fafc;
+                    }
+                `}
+            </style>
 
-            <div className="max-w-[1800px] mx-auto space-y-6">
-                
-                {/* BRAND & STATS BAR (TOP) */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                    <div className="lg:col-span-3 flex items-center gap-4 bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm">
-                        <div className="bg-[#0866ff] p-3 rounded-2xl text-white shadow-lg shadow-blue-500/20"><Shield size={24} fill="currentColor" /></div>
-                        <div>
-                            <h1 className="text-lg font-black tracking-tight uppercase italic text-[#0866ff]">Amole Authority</h1>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Registry Control</p>
+            {/* ──────────────── HERO ──────────────── */}
+            <section style={{ paddingTop: '40px' }}>
+                <div className="hero-gradient">
+                    <div className="status-badge">🛡️ APMA: Registry Control</div>
+                    <h1 style={{ fontSize: "52px", fontWeight: "900", margin: "0 0 10px 0", letterSpacing: "-2px" }}>
+                        User Authority System
+                    </h1>
+                    <p style={{ fontSize: "20px", opacity: 0.8, lineHeight: "1.6" }}>
+                        Managing <strong>{stats.total} total portfolio users</strong>. Operational integrity verified.
+                    </p>
+                    
+                    <div className="flex items-center gap-6 mt-10">
+                        <div style={{ fontSize: '32px', fontWeight: '800' }}>
+                            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                    </div>
-
-                    <div className="lg:col-span-6 flex items-center justify-around bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm">
-                        <TopStat label="Total Nodes" val={stats.total} color="text-slate-900" />
-                        <div className="h-10 w-[1px] bg-slate-100"></div>
-                        <TopStat label="Active" val={stats.active} color="text-emerald-500" />
-                        <div className="h-10 w-[1px] bg-slate-100"></div>
-                        <TopStat label="Authorities" val={stats.admins} color="text-blue-600" />
-                        <div className="h-10 w-[1px] bg-slate-100"></div>
-                        <TopStat label="Suspended" val={stats.suspended} color="text-rose-500" />
-                    </div>
-
-                    <div className="lg:col-span-3 flex justify-end">
-                        <button onClick={loadRegistry} className="p-5 bg-white hover:bg-slate-50 rounded-[1.5rem] border border-slate-200 transition-all active:rotate-180 duration-500 shadow-sm">
-                            <RotateCcw size={22} className="text-slate-500" />
+                        <button onClick={loadRegistry} className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all active:rotate-180">
+                            <RotateCcw size={20} />
                         </button>
                     </div>
                 </div>
+            </section>
 
-                {/* SEARCH & FILTERS */}
-                <div className="flex flex-col md:flex-row items-center gap-6 bg-white p-4 rounded-[2rem] border border-slate-200/60 shadow-sm">
-                    <div className="relative flex-grow group">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0866ff] transition-colors" size={20} />
-                        <input 
-                            type="text"
-                            placeholder="SEARCH ENTIRE REGISTRY BY NAME, EMAIL, PHONE..."
-                            className="w-full bg-[#f8f9fc] border-none py-4 pl-16 pr-8 rounded-2xl text-[11px] font-bold focus:ring-2 focus:ring-[#0866ff]/20 outline-none uppercase tracking-widest transition-all"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex bg-[#1b1b2f] p-1.5 rounded-2xl shadow-lg shrink-0">
-                        {["ALL", "ACTIVE", "PENDING", "SUSPENDED"].map(f => (
-                            <button key={f} onClick={() => setStatusFilter(f)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all ${statusFilter === f ? 'bg-[#0866ff] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>
-                                {f}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* THE REGISTRY - STRICT SINGLE ROW */}
-                <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[2px] border-b border-slate-100">
-                                    <th className="px-8 py-7 text-left">Node Identity</th>
-                                    <th className="px-8 py-7 text-left">Phone</th>
-                                    <th className="px-8 py-7 text-left">Endpoint</th>
-                                    <th className="px-8 py-7 text-center">Authority</th>
-                                    <th className="px-8 py-7 text-center">Status</th>
-                                    <th className="px-8 py-7 text-right">Operations</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredUsers.map(u => (
-                                    <tr key={u.id} className={`group hover:bg-[#f4f7fe] transition-all ${loadingId === u.id ? 'opacity-40 pointer-events-none animate-pulse' : ''}`}>
-                                        <td className="px-8 py-5 whitespace-nowrap">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-[#0866ff] text-[11px] border border-slate-200">{u.full_name?.charAt(0)}</div>
-                                                <span className="font-bold text-[14px] uppercase italic tracking-tight text-slate-800">{u.full_name}</span>
-                                            </div>
-                                        </td>
-                                        
-                                        <td className="px-8 py-5 whitespace-nowrap">
-                                            <div className="flex items-center gap-2 font-mono text-[12px] font-bold text-slate-500">
-                                                <Phone size={12} className="text-[#0866ff]" />
-                                                {u.phone || '---'}
-                                            </div>
-                                        </td>
-                                        
-                                        <td className="px-8 py-5 whitespace-nowrap font-mono text-[11px] text-slate-500">{u.email}</td>
-                                        
-                                        <td className="px-8 py-5 text-center whitespace-nowrap">
-                                            <div className="relative inline-block">
-                                                <select 
-                                                    value={u.role?.toUpperCase() || "USER"}
-                                                    onChange={(e) => handleAction('put', `/api/admin/users/role/${u.id}`, { role: e.target.value }, "Authority Set", u.id)}
-                                                    className={`appearance-none pl-5 pr-10 py-2 rounded-xl text-[10px] font-black border outline-none cursor-pointer transition-all ${
-                                                        u.role?.toUpperCase() === 'ADMIN' ? 'bg-blue-50 border-blue-200 text-[#0866ff]' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
-                                                    }`}
-                                                >
-                                                    <option value="USER">USER</option>
-                                                    <option value="ADMIN">ADMIN</option>
-                                                </select>
-                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-30" size={12} />
-                                            </div>
-                                        </td>
-
-                                        <td className="px-8 py-5 text-center whitespace-nowrap">
-                                            <span className={`text-[9px] font-black px-4 py-1.5 rounded-full border tracking-widest ${
-                                                u.account_status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm' : 'bg-rose-50 text-rose-600 border-rose-100 shadow-sm'
-                                            }`}>
-                                                {u.account_status?.toUpperCase() || 'OFFLINE'}
-                                            </span>
-                                        </td>
-
-                                        <td className="px-8 py-5 text-right whitespace-nowrap">
-                                            <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
-                                                <button onClick={() => handleAction('put', `/api/admin/users/status/${u.id}`, { status: u.account_status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' }, "Status Sync", u.id)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:border-[#0866ff] hover:text-[#0866ff] transition-all active:scale-90"><UserX size={16}/></button>
-                                                <button onClick={() => handleAction('delete', `/api/admin/users/${u.id}`, {}, "DROP NODE", u.id)} className="p-2.5 rounded-xl bg-white border border-slate-200 text-rose-500 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all active:scale-90 shadow-sm"><Trash2 size={16} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            {/* ──────────────── STATS GRID ──────────────── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '30px', width: '100%' }}>
+                <StatCard label="Total Users" val={stats.total} icon={<Users size={28} />} color="#0f172a" />
+                <StatCard label="Active Status" val={stats.active} icon={<Activity size={28} />} color="#10b981" />
+                <StatCard label="Authorities" val={stats.admins} icon={<ShieldCheck size={28} />} color="#0866ff" />
+                <StatCard label="Suspended" val={stats.suspended} icon={<UserX size={28} />} color="#e11d48" />
             </div>
+
+            {/* ──────────────── FULL SCREEN REGISTRY ──────────────── */}
+            <div className="registry-container">
+                <div className="p-10 border-b border-slate-50 flex justify-between items-center">
+                    <div>
+                        <span className="section-label">Sector 02: Full Registry</span>
+                        <h2 style={{ fontSize: "32px", fontWeight: "900", margin: 0 }}>Identity Management</h2>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className="relative">
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <input 
+                                type="text"
+                                placeholder="SEARCH IDENTITIES..."
+                                className="bg-slate-50 border-none py-4 pl-14 pr-8 rounded-2xl text-[12px] font-bold w-[400px] outline-none focus:ring-2 focus:ring-[#e11d48]/20 uppercase"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex bg-[#0f172a] p-1.5 rounded-2xl">
+                            {["ALL", "ACTIVE", "SUSPENDED"].map(f => (
+                                <button key={f} onClick={() => setStatusFilter(f)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all ${statusFilter === f ? 'bg-[#e11d48] text-white' : 'text-slate-500 hover:text-white'}`}>
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <table className="full-table">
+                    <thead>
+                        <tr className="text-[11px] font-black text-slate-400 uppercase tracking-[2px]">
+                            <th style={{ width: '25%' }}>User Identity</th>
+                            <th style={{ width: '20%' }}>Communication</th>
+                            <th style={{ width: '15%', textAlign: 'center' }}>Authority</th>
+                            <th style={{ width: '15%', textAlign: 'center' }}>Status</th>
+                            <th style={{ width: '25%', textAlign: 'right' }}>Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredUsers.map(u => (
+                            <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
+                                <td>
+                                    <div className="flex items-center gap-5">
+                                        <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-[#e11d48] border border-slate-200 text-lg">{u.full_name?.charAt(0)}</div>
+                                        <span className="font-extrabold text-[16px] uppercase italic text-slate-800 tracking-tight">{u.full_name}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-slate-600">
+                                            <Phone size={14} className="text-[#e11d48]" /> {u.phone || '---'}
+                                        </div>
+                                        <div className="font-mono text-[11px] text-slate-400 lowercase">{u.email}</div>
+                                    </div>
+                                </td>
+                                <td className="text-center">
+                                    <select 
+                                        value={u.role?.toUpperCase() || "USER"}
+                                        onChange={(e) => handleAction('put', `/api/admin/users/role/${u.id}`, { role: e.target.value }, "Authority Set", u.id)}
+                                        className="appearance-none px-6 py-3 rounded-xl text-[11px] font-black border border-slate-200 bg-white hover:border-[#e11d48] outline-none cursor-pointer"
+                                    >
+                                        <option value="USER">USER</option>
+                                        <option value="ADMIN">ADMIN</option>
+                                    </select>
+                                </td>
+                                <td className="text-center">
+                                    <span className={`text-[10px] font-black px-5 py-2 rounded-full border tracking-widest ${
+                                        u.account_status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+                                    }`}>
+                                        {u.account_status?.toUpperCase() || 'OFFLINE'}
+                                    </span>
+                                </td>
+                                <td className="text-right">
+                                    <div className="flex justify-end gap-4 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button onClick={() => handleAction('put', `/api/admin/users/status/${u.id}`, { status: u.account_status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' }, "Status Sync", u.id)} className="p-3.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:text-[#e11d48] hover:border-[#e11d48] transition-all"><UserX size={20}/></button>
+                                        <button onClick={() => handleAction('delete', `/api/admin/users/${u.id}`, {}, "DROP USER", u.id)} className="p-3.5 rounded-2xl bg-white border border-slate-200 text-rose-500 hover:bg-[#e11d48] hover:text-white hover:border-[#e11d48] transition-all"><Trash2 size={20} /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <footer style={{ textAlign: 'center', opacity: 0.3, fontSize: '12px', padding: '80px 0' }}>
+                Addis Photo and Media Agency // FULL_REGISTRY_V26 // © 2026
+            </footer>
         </div>
     );
 };
 
-const TopStat = ({ label, val, color }) => (
-    <div className="flex flex-col items-center">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-1">{label}</span>
-        <span className={`text-2xl font-black ${color} tracking-tighter`}>{val || 0}</span>
+const StatCard = ({ label, val, icon, color }) => (
+    <div className="glass-card flex items-center justify-between">
+        <div>
+            <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</p>
+            <h2 style={{ fontSize: '42px', fontWeight: '900', margin: '5px 0', color: '#1e293b' }}>{val}</h2>
+        </div>
+        <div style={{ background: `${color}10`, padding: '15px', borderRadius: '20px', color: color }}>
+            {icon}
+        </div>
     </div>
 );
 

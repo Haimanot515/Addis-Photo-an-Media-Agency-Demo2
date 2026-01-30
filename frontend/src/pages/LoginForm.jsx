@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axios"; 
+import ReCAPTCHA from "react-google-recaptcha";
 import { PiCameraDuotone, PiShieldCheckDuotone, PiUserCircleDuotone } from "react-icons/pi";
+import { FiLoader } from "react-icons/fi";
 
 const LoginForm = ({ setIsAuthenticated }) => {
   const navigate = useNavigate();
@@ -9,68 +11,62 @@ const LoginForm = ({ setIsAuthenticated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(""); 
-  const [captchaToken] = useState("bypass-token"); 
+  const [captchaToken, setCaptchaToken] = useState(""); 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleCaptchaChange = (token) => setCaptchaToken(token);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!captchaToken) {
+      setError("Please complete the security check.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      // 1. Backend Request
       const res = await api.post(
         "/auth/login-user",
         { ...formData, captchaToken },
         { withCredentials: true }
       );
 
-      // 2. Logic after successful API response
       if (res.data && res.data.authenticated) {
         try {
-          // Prepare the role as an array (Required by your ProtectedLayout)
           const userRole = Array.isArray(res.data.role)
             ? res.data.role
             : [res.data.role || "USER"];
 
-          // Store for persistence (for page refreshes)
           localStorage.setItem("user_id", res.data.user_id);
           localStorage.setItem("isAuthenticated", "true");
           localStorage.setItem("role", JSON.stringify(userRole));
 
-          // ✅ THE KEY FIX: Pass the actual role array to the parent state
-          // This allows ProtectedLayout to recognize the user immediately
           if (setIsAuthenticated) {
             setIsAuthenticated(userRole); 
           }
 
           setSuccess("Access Granted! Opening Media Terminal...");
 
-          // Delay redirect so user can see the success message
           setTimeout(() => {
             navigate("/home");
           }, 1500);
 
         } catch (storageErr) {
-          console.error("Client Error:", storageErr);
           setError("Terminal Cache Error. Please try again.");
         }
       } else {
-        setError("Identity verification failed. Please try again.");
+        setError("Identity verification failed.");
       }
-
     } catch (err) {
-      setSuccess(""); 
-      // If backend is down or credentials wrong, show specific error
       const msg = err.response?.data?.error || "Invalid Credentials";
       setError(msg);
-      
-      // Cleanup on failure
       localStorage.removeItem("role"); 
       localStorage.removeItem("isAuthenticated");
     } finally {
@@ -79,85 +75,148 @@ const LoginForm = ({ setIsAuthenticated }) => {
   };
 
   return (
-    <div style={wrapperStyle}>
-      <div style={containerStyle}>
-        <form onSubmit={handleSubmit} style={glassCardStyle}>
-          <div style={iconWrapperStyle}>
-            <PiCameraDuotone size={42} color="#3b82f6" />
+    <div className="login-page-wrapper" style={containerStyle}>
+      
+      <div className="bg-text-wall">
+        {Array.from({ length: 15 }).map((_, i) => (
+          <div key={i} className="scrolling-text">
+            ADDIS PHOTO & MEDIA AGENCY • ADDIS PHOTO & MEDIA AGENCY • ADDIS PHOTO & MEDIA AGENCY • 
           </div>
-          
-          <h2 style={titleStyle}>Agency Terminal</h2>
-          <p style={subtitleStyle}>Addis Photo & Media Agency • v2.0</p>
-
-          {success && <div style={successBoxStyle}><PiShieldCheckDuotone size={18}/> {success}</div>}
-          {error && <div style={errorBoxStyle}>{error}</div>}
-
-          <div style={inputContainerStyle}>
-            <label style={labelStyle}>Identity</label>
-            <div style={inputWrapperStyle}>
-              <PiUserCircleDuotone style={inputIconStyle} size={20} />
-              <input 
-                style={inputStyle} 
-                name="identifier" 
-                placeholder="Email or Phone" 
-                value={formData.identifier} 
-                onChange={handleChange} 
-                required 
-              />
-            </div>
-          </div>
-
-          <div style={inputContainerStyle}>
-            <label style={labelStyle}>Access Key</label>
-            <div style={inputWrapperStyle}>
-              <PiShieldCheckDuotone style={inputIconStyle} size={20} />
-              <input 
-                style={inputStyle} 
-                type="password" 
-                name="password" 
-                placeholder="••••••••" 
-                value={formData.password} 
-                onChange={handleChange} 
-                required 
-              />
-            </div>
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={loading} 
-            style={loading ? disabledBtnStyle : activeBtnStyle}
-          >
-            {loading ? "VERIFYING..." : "ENTER TERMINAL"}
-          </button>
-
-          <div style={footerStyle}>
-            <Link to="/forgot-password" style={linkStyle}>Forgot Key?</Link>
-            <span style={{color: '#64748b'}}>New Agent? <Link to="/register" style={linkStyle}>Register</Link></span>
-          </div>
-        </form>
+        ))}
       </div>
+
+      <div className="login-card" style={cardStyle}>
+        <div className="card-header" style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ fontSize: '45px', color: '#065f46', marginBottom: '10px', opacity: 0.8 }}>
+            <PiCameraDuotone />
+          </div>
+          <h2 style={{ color: '#064e3b', fontSize: '22px', fontWeight: '800', margin: '0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Agency Terminal</h2>
+          <p style={{ color: '#6b7280', fontSize: '14px', fontWeight: '500', marginTop: '5px' }}>Addis Photo & Media House</p>
+        </div>
+
+        {success && <div style={successBoxStyle}><PiShieldCheckDuotone size={18}/> {success}</div>}
+        {error && <div style={errorStyle}><PiShieldCheckDuotone size={18}/> {error}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <div className="input-group" style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={labelStyle}><PiUserCircleDuotone size={18}/> Identity</label>
+            <input 
+              style={inputStyle} 
+              name="identifier" 
+              placeholder="Email or Phone" 
+              value={formData.identifier} 
+              onChange={handleChange} 
+              required 
+            />
+          </div>
+
+          <div className="input-group" style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={labelStyle}><PiShieldCheckDuotone size={18}/> Access Key</label>
+            <input 
+              style={inputStyle} 
+              type="password" 
+              name="password" 
+              placeholder="••••••••" 
+              value={formData.password} 
+              onChange={handleChange} 
+              required 
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '25px', transform: 'scale(0.8)', transformOrigin: 'center center' }}>
+            <ReCAPTCHA
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={handleCaptchaChange}
+            />
+          </div>
+
+          <button type="submit" disabled={loading} style={{...btnStyle, opacity: loading ? 0.7 : 1}}>
+            {loading ? <FiLoader className="spinner" /> : "ENTER TERMINAL"}
+          </button>
+        </form>
+
+        <div style={footerStyle}>
+          <Link to="/forgot-password" style={linkStyle}>Forgot Key?</Link>
+          <span style={{color: '#6b7280'}}>New Agent? <Link to="/register" style={linkStyle}>Register</Link></span>
+        </div>
+      </div>
+
+      <style>{`
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Hides scrollbar for Chrome, Safari and Opera */
+        .login-card::-webkit-scrollbar {
+          display: none;
+        }
+
+        .bg-text-wall {
+          position: fixed;
+          top: -10%; left: -10%;
+          width: 120%; height: 120%;
+          display: flex; flex-direction: column;
+          gap: 25px;
+          transform: rotate(-8deg);
+          z-index: 0;
+          pointer-events: none;
+          opacity: 0.08;
+        }
+
+        .scrolling-text {
+          font-size: 3.8rem;
+          font-weight: 800;
+          color: #064e3b;
+          white-space: nowrap;
+          letter-spacing: 2px;
+          animation: slide 120s linear infinite;
+        }
+
+        .scrolling-text:nth-child(even) { animation-direction: reverse; opacity: 0.4; }
+
+        @keyframes slide {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 };
 
-// --- STYLES (MATCHING YOUR TERMINAL UI) ---
-const wrapperStyle = { backgroundColor: '#020617', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Inter', sans-serif", background: 'radial-gradient(circle at top right, #1e293b, #020617)' };
-const containerStyle = { width: '100%', maxWidth: '440px', padding: '20px' };
-const glassCardStyle = { background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(12px)', padding: '48px 40px', borderRadius: '32px', border: '1px solid rgba(255, 255, 255, 0.05)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)', textAlign: 'center' };
-const iconWrapperStyle = { background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.05))', width: '84px', height: '84px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '1px solid rgba(59, 130, 246, 0.2)' };
-const titleStyle = { color: '#f8fafc', fontSize: '28px', fontWeight: '800', margin: '0 0 6px' };
-const subtitleStyle = { color: '#94a3b8', fontSize: '14px', marginBottom: '32px', textTransform: 'uppercase' };
-const inputContainerStyle = { textAlign: 'left', marginBottom: '22px' };
-const labelStyle = { color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '8px', display: 'block' };
-const inputWrapperStyle = { position: 'relative', display: 'flex', alignItems: 'center' };
-const inputIconStyle = { position: 'absolute', left: '16px', color: '#475569' };
-const inputStyle = { width: '100%', padding: '16px 16px 16px 48px', background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', color: '#fff', outline: 'none', boxSizing: 'border-box' };
-const activeBtnStyle = { width: '100%', padding: '18px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '16px', cursor: 'pointer', fontWeight: '700' };
-const disabledBtnStyle = { ...activeBtnStyle, background: '#1e293b', color: '#475569', cursor: 'not-allowed' };
-const successBoxStyle = { background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '14px', borderRadius: '12px', fontSize: '14px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' };
-const errorBoxStyle = { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '14px', borderRadius: '12px', fontSize: '14px', marginBottom: '24px' };
-const footerStyle = { marginTop: '30px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' };
-const linkStyle = { color: '#3b82f6', textDecoration: 'none', fontWeight: '600' };
+const containerStyle = { 
+  background: 'linear-gradient(135deg, #1e293b 0%, #064e3b 100%)',
+  minHeight: '100vh', 
+  display: 'flex', 
+  justifyContent: 'center', 
+  alignItems: 'center', 
+  padding: '20px', 
+  fontFamily: "'Inter', sans-serif",
+  position: 'relative',
+  overflow: 'hidden'
+};
+
+const cardStyle = { 
+  background: 'rgba(255, 255, 255, 0.98)', 
+  padding: '40px', 
+  borderRadius: '24px', 
+  width: '100%', 
+  maxWidth: '440px', 
+  maxHeight: '90vh', 
+  overflowY: 'scroll', // Keep scrolling active
+  msOverflowStyle: 'none', // IE and Edge
+  scrollbarWidth: 'none', // Firefox
+  boxShadow: '0 40px 80px -15px rgba(0, 0, 0, 0.4)', 
+  position: 'relative',
+  zIndex: 1,
+  backdropFilter: 'blur(10px)',
+  textAlign: 'center'
+};
+
+const inputStyle = { width: '100%', background: '#fcfcfc', border: '1px solid #d1d5db', padding: '14px', borderRadius: '10px', color: '#111827', outline: 'none', fontSize: '15px', boxSizing: 'border-box' };
+const labelStyle = { color: '#374151', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px', fontSize: '12.5px', fontWeight: '700', textTransform: 'uppercase' };
+const btnStyle = { width: '100%', background: '#064e3b', color: '#fff', padding: '16px', borderRadius: '12px', border: 'none', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', fontSize: '15px', textTransform: 'uppercase' };
+const successBoxStyle = { background: '#ecfdf5', color: '#065f46', padding: '12px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1px solid #a7f3d0', fontSize: '13px' };
+const errorStyle = { background: '#fef2f2', color: '#991b1b', padding: '12px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1px solid #fee2e2', fontSize: '13px' };
+const footerStyle = { marginTop: '25px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' };
+const linkStyle = { color: '#065f46', textDecoration: 'none', fontWeight: '700' };
 
 export default LoginForm;

@@ -1,82 +1,117 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Cookie, Save, Trash2, Hash, Plus, RefreshCcw } from 'lucide-react';
+import api from '../../api/axios'; 
+import { Cookie, Trash2, RefreshCw, Loader2, Edit3 } from 'lucide-react';
 
 const AdminCookiesPolicy = () => {
-    const [sections, setSections] = useState([]);
+    const [cookies, setCookies] = useState([]);
+    const [fetching, setFetching] = useState(true);
     const [loading, setLoading] = useState(false);
+    
+    // Form State (Handles both New and Edits)
+    const [formData, setFormData] = useState({ id: null, serial_number: '', title: '', content: '' });
+    const [status, setStatus] = useState({ type: '', msg: '' });
 
     const syncRegistry = async () => {
-        setLoading(true);
+        setFetching(true);
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('/api/admin/legal', { headers: { Authorization: `Bearer ${token}` } });
-            setSections(res.data.registry.cookies.sort((a, b) => a.serial_number - b.serial_number));
-        } catch (err) { console.error("COOKIE_SYNC_FAIL"); }
-        finally { setLoading(false); }
+            const res = await api.get('/admin/legal'); // Calls getAdminLegalRegistry
+            if (res.data.success) {
+                setCookies(res.data.registry.cookies);
+            }
+        } catch (err) { console.error("SYNC_ERROR"); }
+        finally { setFetching(false); }
     };
 
     useEffect(() => { syncRegistry(); }, []);
 
-    const addNode = () => {
-        const nextSn = sections.length > 0 ? Math.max(...sections.map(s => s.serial_number)) + 1 : 1;
-        setSections([...sections, { serial_number: nextSn, title: '', content: '', isNew: true }]);
+    const handlePush = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            // This maps to your pushCookieRule (handles both Update and Insert)
+            const res = await api.put('/admin/legal/cookie', formData);
+            if (res.data.success) {
+                setStatus({ type: 'success', msg: `NODE ${formData.id ? 'UPDATED' : 'COMMITTED'}` });
+                setFormData({ id: null, serial_number: '', title: '', content: '' });
+                syncRegistry();
+            }
+        } catch (err) { setStatus({ type: 'error', msg: "PUSH REJECTED" }); }
+        finally { setLoading(false); }
     };
 
-    const pushNode = async (index) => {
-        const node = sections[index];
+    const handleDrop = async (id) => {
+        if (!window.confirm("EXECUTE DROP: PERMANENT PURGE?")) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.put('/api/admin/legal/cookie', node, { headers: { Authorization: `Bearer ${token}` } });
-            alert(`COOKIE NODE ${node.serial_number} COMMITTED`);
+            await api.delete(`/admin/legal/cookie/${id}`); // Calls dropCookieRule
             syncRegistry();
-        } catch (err) { alert("PUSH_ERROR"); }
+        } catch (err) { alert("DROP_FAILED"); }
     };
 
-    const dropNode = async (id, index) => {
-        if (!window.confirm("EXECUTE DROP: REMOVE THIS COOKIE RULE?")) return;
-        try {
-            const token = localStorage.getItem('token');
-            if (id) await axios.delete(`/api/admin/legal/cookie/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-            const updated = [...sections];
-            updated.splice(index, 1);
-            setSections(updated);
-        } catch (err) { alert("DROP_ERROR"); }
+    // Load existing node into form for editing
+    const prepEdit = (node) => {
+        setFormData({ id: node.id, serial_number: node.serial_number, title: node.title, content: node.content });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm mb-8">
-            <div className="flex justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="bg-amber-50 p-3 rounded-2xl text-amber-600"><Cookie size={24} /></div>
-                    <h2 className="text-sm font-black uppercase tracking-widest">Cookie Authority</h2>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={syncRegistry} className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all"><RefreshCcw size={18} className={loading ? "animate-spin" : ""} /></button>
-                    <button onClick={addNode} className="bg-[#1b1b2f] text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg"><Plus size={16} className="inline mr-2"/> Add Rule</button>
-                </div>
+        <main className="container contact" style={{ maxWidth: '1190px', marginTop: '100px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Cookie size={28} /> Cookie Authority</h1>
+                <button onClick={syncRegistry} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#151414' }}>
+                    <RefreshCw className={fetching ? 'animate-spin' : ''} size={20} />
+                </button>
             </div>
-            <div className="space-y-4">
-                {sections.map((node, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                        <div className="col-span-1 relative">
-                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={12}/>
-                            <input type="number" value={node.serial_number} onChange={(e) => {const u = [...sections]; u[index].serial_number = e.target.value; setSections(u);}} className="w-full bg-white py-3 pl-8 rounded-xl text-[12px] font-black outline-none" />
-                        </div>
-                        <div className="col-span-3">
-                            <input type="text" value={node.title} onChange={(e) => {const u = [...sections]; u[index].title = e.target.value; setSections(u);}} className="w-full bg-white py-3 px-4 rounded-xl text-[12px] font-bold uppercase outline-none" placeholder="TITLE" />
-                        </div>
-                        <div className="col-span-6">
-                            <textarea value={node.content} onChange={(e) => {const u = [...sections]; u[index].content = e.target.value; setSections(u);}} className="w-full bg-white py-3 px-4 rounded-xl text-[12px] min-h-[46px] outline-none resize-none" placeholder="CONTENT..." />
-                        </div>
-                        <div className="col-span-2 flex gap-2 justify-end">
-                            <button onClick={() => pushNode(index)} className="p-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 shadow-md shadow-amber-100"><Save size={16} /></button>
-                            <button onClick={() => dropNode(node.id, index)} className="p-3 bg-white border border-slate-200 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                        </div>
+
+            <div className="contact-wrapper">
+                {/* REGISTRY COLUMN */}
+                <section className="contact-details" style={{ flex: '1 1 500px', maxHeight: '800px', overflowY: 'auto' }}>
+                    <h2 style={{ color: '#fff' }}>Active Nodes</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '2rem' }}>
+                        {cookies.map((node) => (
+                            <div key={node.id} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', padding: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#f59e0b', fontWeight: '800' }}>#{node.serial_number}</span>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button onClick={() => prepEdit(node)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}><Edit3 size={16}/></button>
+                                        <button onClick={() => handleDrop(node.id)} style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                                    </div>
+                                </div>
+                                <h4 style={{ color: '#fff', fontSize: '0.9rem', marginTop: '10px' }}>{node.title}</h4>
+                            </div>
+                        ))}
                     </div>
-                ))}
+                </section>
+
+                {/* PUSH FORM COLUMN */}
+                <section className="contact-form-section" style={{ flex: '1 1 450px' }}>
+                    <form className="contact-form" onSubmit={handlePush}>
+                        <h2>{formData.id ? "Execute UPDATE" : "Execute PUSH"}</h2>
+                        {status.msg && <div className={`status-msg ${status.type}`} style={{ marginBottom: '1rem', color: status.type === 'success' ? '#4ade80' : '#f87171' }}>{status.msg}</div>}
+                        
+                        <div className="form-group">
+                            <label>S/N</label>
+                            <input type="number" value={formData.serial_number} onChange={(e) => setFormData({...formData, serial_number: e.target.value})} placeholder="Priority..." required />
+                        </div>
+                        <div className="form-group">
+                            <label>Title *</label>
+                            <input type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="Identifier..." required />
+                        </div>
+                        <div className="form-group">
+                            <label>Protocol Detail *</label>
+                            <textarea value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})} style={{ minHeight: '180px' }} placeholder="Legal string..." required />
+                        </div>
+
+                        <button type="submit" className="btn-submit" disabled={loading}>
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : "COMMIT TO REGISTRY"}
+                        </button>
+                        {formData.id && (
+                            <button type="button" onClick={() => setFormData({ id: null, serial_number: '', title: '', content: '' })} style={{ width: '100%', marginTop: '10px', background: 'transparent', color: '#ccc', border: '1px solid #444' }} className="btn-submit">CANCEL EDIT</button>
+                        )}
+                    </form>
+                </section>
             </div>
-        </div>
+        </main>
     );
 };
+
 export default AdminCookiesPolicy;

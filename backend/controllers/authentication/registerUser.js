@@ -3,6 +3,12 @@ const pool = require('../../config/dbConfig');
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
 const { sendEmail } = require('../../config/smsConfig');
+const axios = require('axios'); // Required for ReCAPTCHA verification
+
+/**
+ * SCHEMA NOTE: 
+ * Always use 'DROP TABLE IF EXISTS users CASCADE;' when resetting the database.
+ */
 
 exports.registerUser = async (req, res) => {
   const client = await pool.connect();
@@ -11,8 +17,23 @@ exports.registerUser = async (req, res) => {
     const {
       full_name, phone, email, password,
       preferred_method, 
-      all_consents_accepted
+      all_consents_accepted,
+      captchaToken // Received from the frontend
     } = req.body;
+
+    // --- 0. CAPTCHA VERIFICATION (Commented out for now) ---
+    /*
+    if (!captchaToken) {
+      return res.status(400).json({ error: 'Security check failed. Please complete the CAPTCHA.' });
+    }
+
+    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
+    const captchaRes = await axios.post(verifyUrl);
+    
+    if (!captchaRes.data.success) {
+      return res.status(400).json({ error: 'Invalid CAPTCHA. Please try again.' });
+    }
+    */
 
     // --- 1. PRE-CHECK VALIDATION ---
     if (preferred_method === 'EMAIL' && (!email || email.trim() === "")) {
