@@ -1,7 +1,7 @@
 <h1 align="center">Addis Photo & Media Agency</h1>
 
 <h3 align="center">
-  A modern media-focused web platform showcasing photography, videography, creative services, and portfolio work in one professional digital space.
+  A modern media-focused web platform showcasing photography, videography, creative  services, and portfolio work in one professional digital space.
 </h3>
 
 <img src="https://res.cloudinary.com/dq3jkpys8/image/upload/v1770189399/projects/fsdpnb2ocar9lxudruvr.png" width="100%" style="border-radius:10px;" />
